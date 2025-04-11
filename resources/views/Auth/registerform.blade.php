@@ -39,7 +39,7 @@
       </form>
       <p class="signin-text">
         Already have an account?
-        <a href="#">SIGN-IN NOW!</a>
+        <a href="{{ url('loginform') }}">SIGN-IN NOW!</a>
       </p>
     </div>
   </div>

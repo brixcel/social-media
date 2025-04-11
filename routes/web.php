@@ -8,4 +8,5 @@ use App\Http\Controllers\FirebaseAuthController;
 // Route::get('/', function () {
 //     return view('welcome');
 // });
-Route::get('/', [FirebaseAuthController::class, 'registerForm']);
+Route::get('/register', [FirebaseAuthController::class, 'registerForm']);
+Route::get('/login', [FirebaseAuthController::class, 'loginForm']);
