@@ -128,3 +128,155 @@
     text-decoration: underline;
   }
   
+
+
+
+/* Additional styles for login form */
+.divider {
+  width: 100%;
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 20px 0;
+}
+
+.login-btn {
+  background-color: var(--main-color);
+  color: white;
+  font-size: 1rem;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  width: 100%;
+  cursor: pointer;
+  transition: var(--transition);
+  font-weight: 600;
+}
+
+.login-btn:hover {
+  background-color: var(--main-color-drk);
+}
+
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background-color: white;
+  color: rgb(0, 44, 105); /* Google blue color */
+  font-size: 1rem;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  width: 100%;
+  cursor: pointer;
+  transition: var(--transition);
+  font-weight: 600; /* Make text bold */
+  margin-top: 10px;
+}
+
+.google-btn:hover {
+  background-color: #f8f8f8;
+  border-color: #ccc;
+}
+
+.google-icon {
+  width: 25px;
+  height: 25px;
+}
+
+/* Update remember-me style */
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  gap: 5px;
+}
+
+.form-label {
+  font-size: 0.9rem;
+  color: var(--text-dark);
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+  transition: var(--transition);
+}
+
+.form-control:focus {
+  border-color: var(--main-color);
+  box-shadow: 0 0 0 3px rgba(18, 103, 221, 0.2);
+  outline: none;
+}
+
+.forgot-password {
+  color: var(--main-color);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.forgot-password:hover {
+  text-decoration: underline;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.form-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.register-link {
+  color: var(--main-color);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.register-link:hover {
+  text-decoration: underline;
+}
+
+.register-text {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.9rem;
+}
+
+/* Error state styles */
+.error .form-label {
+  color: #e53935;
+}
+
+.error .form-control {
+  border-color: #e53935;
+}
+
+/* Logo positioning fix for login page */
+.logo {
+  position: fixed;
+  top: 30px;
+  left: 40px;
+}
+
+/* Container adjustments for login page */
+.container {
+  max-width: 450px;
+}
