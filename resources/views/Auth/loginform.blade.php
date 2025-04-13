@@ -11,24 +11,25 @@
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-database.js"></script>
   <script>
     const firebaseConfig = {
-      apiKey: "{{ config('services.firebase.api_key') }}",
-      authDomain: "{{ config('services.firebase.auth_domain') }}",
-      databaseURL: "{{ config('services.firebase.database_url') }}",
-      projectId: "{{ config('services.firebase.project_id') }}",
-      storageBucket: "{{ config('services.firebase.storage_bucket') }}",
-      messagingSenderId: "{{ config('services.firebase.messaging_sender_id') }}",
-      appId: "{{ config('services.firebase.app_id') }}",
-      measurementId: "{{ config('services.firebase.measurement_id') }}"
+      apiKey: "AIzaSyAZ6EzZLpBIUlTjFm7ZUBfMMkmslIOeMFg",
+      authDomain: "social-media-8c5ba.firebaseapp.com",
+      databaseURL: "https://social-media-8c5ba-default-rtdb.firebaseio.com",
+      projectId: "social-media-8c5ba",
+      storageBucket: "social-media-8c5ba.appspot.com",
+      messagingSenderId: "25174929156",
+      appId: "1:25174929156:web:edd2093c4b96f710262a51",
+      measurementId: "G-SMRP4X0HPM"
     };
+    
     firebase.initializeApp(firebaseConfig);
   </script>
 </head>
 <body>
-  <div class="logo">
+  <div class="login-logo">
     <h1><span class="bold">URSAC</span> Hub</h1>
   </div>
   
-  <div class="container">
+  <div class="login-container">
     <div class="form-card">
       <h2>Welcome GIANT!</h2>
       
@@ -73,7 +74,6 @@
     const emailGroup = document.getElementById('email-group');
     const passwordGroup = document.getElementById('password-group');
     
-    // Function to show error state
     function showError(element, isError) {
       if (isError) {
         element.classList.add('error');
@@ -82,67 +82,52 @@
       }
     }
     
-    // Function to check if user exists in Firebase
-    async function checkUserCredentials(emailOrStudentId, password) {
+    function isEmail(input) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(input);
+    }
+    
+    async function authenticateUser(emailOrStudentId, password) {
       try {
-        // First, try to find the user by student ID
-        const studentIdSnapshot = await firebase.database()
-          .ref('users')
-          .orderByChild('studentId')
-          .equalTo(emailOrStudentId)
-          .once('value');
-        
-        const studentIdData = studentIdSnapshot.val();
-        
-        if (studentIdData) {
-          // User found by student ID
-          const userId = Object.keys(studentIdData)[0];
-          const userData = studentIdData[userId];
+        if (isEmail(emailOrStudentId)) {
+          const userCredential = await firebase.auth().signInWithEmailAndPassword(emailOrStudentId, password);
+          const user = userCredential.user;
           
-          // Here you would normally check the password
-          // For demo purposes, we're just checking if the user exists
-          // In a real app, you would use Firebase Authentication or a secure password check
+          const snapshot = await firebase.database().ref('users/' + user.uid).once('value');
+          const userData = snapshot.val();
           
-          return { success: true, userData };
-        }
-        
-        // If not found by student ID, try email authentication
-        try {
-          // This is a simplified example - in a real app, you would use Firebase Authentication
-          // For demo purposes, we're just checking if the user exists in the database
-          const emailSnapshot = await firebase.database()
+          return { success: true, user, userData };
+        } else {
+          const snapshot = await firebase.database()
             .ref('users')
-            .orderByChild('email')
+            .orderByChild('studentId')
             .equalTo(emailOrStudentId)
             .once('value');
           
-          const emailData = emailSnapshot.val();
+          const data = snapshot.val();
           
-          if (emailData) {
-            // User found by email
-            const userId = Object.keys(emailData)[0];
-            const userData = emailData[userId];
-            
-            return { success: true, userData };
+          if (!data) {
+            return { success: false, error: "No user found with this Student ID" };
           }
           
-          // User not found
-          return { success: false, error: 'Invalid email/student ID or password' };
-        } catch (error) {
-          console.error('Email auth error:', error);
-          return { success: false, error: 'Authentication failed' };
+          const userId = Object.keys(data)[0];
+          const userData = data[userId];
+          
+          if (!userData.email) {
+            return { success: false, error: "User email not found" };
+          }
+          
+          const userCredential = await firebase.auth().signInWithEmailAndPassword(userData.email, password);
+          return { success: true, user: userCredential.user, userData };
         }
       } catch (error) {
-        console.error('Database error:', error);
-        return { success: false, error: 'Authentication failed' };
+        return { success: false, error: error.message };
       }
     }
     
-    // Form submission handler
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       
-      // Reset error states
       showError(emailGroup, false);
       showError(passwordGroup, false);
       
@@ -160,52 +145,72 @@
         return;
       }
       
-      // Check credentials against Firebase
-      const result = await checkUserCredentials(emailStudentId, password);
+      const submitButton = form.querySelector('button[type="submit"]');
+      const originalButtonText = submitButton.textContent;
+      submitButton.textContent = "Signing in...";
+      submitButton.disabled = true;
+      
+      const result = await authenticateUser(emailStudentId, password);
+      
+      submitButton.textContent = originalButtonText;
+      submitButton.disabled = false;
       
       if (result.success) {
-        // Successful login
-        console.log('Login successful', result.userData);
-        
-        // Store in local storage if remember me is checked
         if (rememberMe) {
-          localStorage.setItem('user', JSON.stringify(result.userData));
+          localStorage.setItem('user', JSON.stringify({
+            uid: result.user.uid,
+            email: result.user.email,
+            ...result.userData
+          }));
         }
         
-        // Redirect to dashboard or home page
-        // window.location.href = '/dashboard';
-        alert('Login successful!');
+        alert('Login successful! Welcome, ' + (result.userData.firstName || 'User'));
+        window.location.href = '/homepage';
       } else {
-        // Failed login
         console.error('Login failed:', result.error);
+        alert('Login failed: ' + result.error);
         showError(emailGroup, true);
         showError(passwordGroup, true);
       }
     });
     
-    // Google sign-in handler
     document.getElementById('google-signin').addEventListener('click', () => {
       const provider = new firebase.auth.GoogleAuthProvider();
       firebase.auth().signInWithPopup(provider)
         .then((result) => {
-          // Check if the Google user exists in your database
           const user = result.user;
           console.log('Google sign-in successful', user);
           
-          // You might want to check if this Google user is registered in your system
           firebase.database().ref('users')
             .orderByChild('email')
             .equalTo(user.email)
             .once('value')
             .then((snapshot) => {
               if (snapshot.exists()) {
-                // User exists, proceed with login
-                alert('Google login successful!');
-                // window.location.href = '/dashboard';
+                const userData = Object.values(snapshot.val())[0];
+                
+                localStorage.setItem('user', JSON.stringify({
+                  uid: user.uid,
+                  email: user.email,
+                  ...userData
+                }));
+                
+                alert('Google login successful! Welcome, ' + (userData.firstName || user.displayName || 'User'));
               } else {
-                // User doesn't exist, you might want to register them
-                // or show an error message
-                alert('This Google account is not registered. Please register first.');
+                firebase.database().ref('users/' + user.uid).set({
+                  firstName: user.displayName ? user.displayName.split(' ')[0] : '',
+                  lastName: user.displayName ? user.displayName.split(' ').slice(1).join(' ') : '',
+                  email: user.email,
+                  createdAt: firebase.database.ServerValue.TIMESTAMP,
+                  provider: 'google'
+                })
+                .then(() => {
+                  alert('Google account registered successfully! Welcome!');
+                })
+                .catch((error) => {
+                  console.error('Error creating user:', error);
+                  alert('Failed to create user: ' + error.message);
+                });
               }
             });
         })
@@ -215,10 +220,25 @@
         });
     });
     
-    // Link to registration page
     document.querySelector('.register-link').addEventListener('click', (e) => {
       e.preventDefault();
       window.location.href = '/register';
+    });
+    
+    document.querySelector('.forgot-password').addEventListener('click', (e) => {
+      e.preventDefault();
+      const email = prompt("Please enter your email address to reset your password:");
+      
+      if (email) {
+        firebase.auth().sendPasswordResetEmail(email)
+          .then(() => {
+            alert("Password reset email sent. Please check your inbox.");
+          })
+          .catch((error) => {
+            console.error("Error sending password reset:", error);
+            alert("Error: " + error.message);
+          });
+      }
     });
   </script>
 </body>

@@ -22,4 +22,15 @@ class FirebaseService
     {
         return $this->database;
     }
+    
+    public function getPosts()
+    {
+        return $this->database->getReference('posts')->getValue();
+    }
+
+    public function createPost($data)
+    {
+        return $this->database->getReference('posts')->push($data);
+    }
+
 }
