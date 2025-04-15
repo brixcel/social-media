@@ -318,7 +318,6 @@ body {
 .ursac-container {
   display: flex;
   min-height: calc(100vh - 60px);
-  margin-top: 60px;
 }
 
 /* Header styles */
@@ -332,24 +331,36 @@ body {
   color: white;
   display: flex;
   align-items: center;
+  justify-content: center;
   padding: 0 20px;
   z-index: 100;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
+
 .ursac-header-logo {
   font-size: 22px;
   font-weight: 700;
   font-style: italic;
-  margin-right: 20px;
+  margin-bottom: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
+
 .ursac-header-logo a {
   color: white;
   text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
 .ursac-header-search {
-  flex: 1;
-  max-width: 400px;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto 20px auto;
 }
+
 .ursac-header-search input {
   width: 100%;
   padding: 10px 15px;
@@ -357,11 +368,15 @@ body {
   border-radius: 20px;
   font-size: 14px;
 }
+
 .ursac-header-profile {
   display: flex;
   align-items: center;
-  margin-left: 20px;
+  margin-top: auto;
+  padding: 15px;
+  border-top: 1px solid #e4e6eb;
 }
+
 .ursac-user-avatar {
   width: 32px;
   height: 32px;
@@ -375,55 +390,67 @@ body {
   color: #555;
   font-weight: bold;
 }
+
 .ursac-user-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
+
 .ursac-user-name {
   font-weight: 500;
   font-size: 14px;
 }
 
-/* Left Sidebar styles */
+/* Left Sidebar styles - MODIFIED FOR LARGER ICONS */
 .ursac-sidebar-left {
   position: fixed;
-  top: 60px;
+  top: 0;
   left: 0;
   bottom: 0;
-  width: 318px;
+  width: 220px;
   background-color: white;
-  padding: 20px 0;
+  padding: 20px 0 0 0;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
   z-index: 90;
 }
+
 .ursac-sidebar-menu {
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
+
 .ursac-menu-item {
   display: flex;
   align-items: center;
-  padding: 12px 20px;
+  justify-content: center;
+  padding: 16px 20px;
   color: #444;
   text-decoration: none;
   font-weight: 500;
   transition: background-color 0.2s;
 }
+
 .ursac-menu-item:hover {
-  background-color: #f0f2f5;
+  background-color: var(--main-color);
 }
+
 .ursac-menu-active {
-  color: #0078ff;
-  background-color: #e6f2ff;
+  color: #444;
 }
+
 .ursac-menu-item i {
-  margin-right: 10px;
-  font-size: 18px;
-  width: 24px;
+  font-size: 28px; /* Increased from 18px */
+  width: 100%;
   text-align: center;
+  align-items: center;
+  justify-content: center;
 }
+
+
 .ursac-post-mobile-btn {
   margin: 10px 20px;
   padding: 10px;
@@ -436,6 +463,7 @@ body {
   text-align: center;
   transition: background-color 0.2s;
 }
+
 .ursac-post-mobile-btn:hover {
   background-color: #0066cc;
 }
@@ -446,17 +474,19 @@ body {
   padding: 20px;
   margin-left: 220px;
   margin-right: 300px;
-  background-color: #f0f2f5;
-  min-height: calc(100vh - 60px);
-  display:block;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
+
 .ursac-content-tabs {
   display: flex;
   background-color: #005bb7;
-  border-radius: 5px;
-  margin-bottom: 20px;
+  border-radius: 5px 5px 0 0;
+  margin-bottom: 0;
   overflow: hidden;
 }
+
 .ursac-tab {
   flex: 1;
   padding: 15px;
@@ -466,9 +496,11 @@ body {
   cursor: pointer;
   transition: background-color 0.2s;
 }
+
 .ursac-tab-active {
-  background-color: #0078ff;
+  background-color: #004a93;
 }
+
 .ursac-tab:hover:not(.ursac-tab-active) {
   background-color: #0066cc;
 }
@@ -476,23 +508,26 @@ body {
 /* Create post styles */
 .ursac-create-post {
   background-color: white;
-  border-radius: 10px;
+  border-radius: 5px;
   padding: 15px;
   margin-bottom: 20px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 }
+
 .ursac-create-post-header {
   display: flex;
   align-items: center;
   margin-bottom: 10px;
 }
+
 .ursac-create-post-avatar-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-right: 10px;
 }
+
 .ursac-create-post-avatar {
   width: 40px;
   height: 40px;
@@ -506,6 +541,7 @@ body {
   font-weight: bold;
   margin-bottom: 4px;
 }
+
 .ursac-create-post-username {
   font-size: 12px;
   color: #333;
@@ -516,6 +552,7 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .ursac-post-input {
   flex: 1;
   padding: 12px 15px;
@@ -526,18 +563,22 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
 .ursac-post-input:focus {
   outline: none;
   box-shadow: 0 0 0 2px rgba(0, 120, 255, 0.2);
 }
+
 .ursac-expanded-post-area {
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.3s ease;
 }
+
 .ursac-expanded-post-area.ursac-expanded {
   max-height: 300px;
 }
+
 .ursac-post-textarea {
   width: 100%;
   min-height: 100px;
@@ -549,15 +590,18 @@ body {
   margin-bottom: 10px;
   resize: none;
 }
+
 .ursac-post-textarea:focus {
   outline: none;
 }
+
 .ursac-media-preview {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   margin: 10px 0;
 }
+
 .ursac-preview-item {
   position: relative;
   width: 100px;
@@ -566,16 +610,19 @@ body {
   overflow: hidden;
   background-color: #f0f2f5;
 }
+
 .ursac-preview-item img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
+
 .ursac-preview-item video {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
+
 .ursac-preview-file {
   display: flex;
   flex-direction: column;
@@ -586,11 +633,13 @@ body {
   padding: 10px;
   text-align: center;
 }
+
 .ursac-preview-file i {
   font-size: 24px;
   margin-bottom: 5px;
   color: #0078ff;
 }
+
 .ursac-preview-file span {
   font-size: 10px;
   overflow: hidden;
@@ -598,6 +647,7 @@ body {
   white-space: nowrap;
   width: 100%;
 }
+
 .ursac-preview-remove {
   position: absolute;
   top: 5px;
@@ -613,6 +663,7 @@ body {
   cursor: pointer;
   font-size: 12px;
 }
+
 .ursac-post-actions {
   display: flex;
   justify-content: space-between;
@@ -621,27 +672,41 @@ body {
   border-top: 1px solid #e4e6eb;
   padding-top: 10px;
 }
+
 .ursac-post-action-group {
   display: flex;
+  width: 100%;
+  justify-content: space-between;
+  background-color: #f0f2f5;
+  border-radius: 5px;
+  padding: 5px;
 }
+
 .ursac-post-action {
   display: flex;
   align-items: center;
+  justify-content: center;
   color: #65676b;
   font-size: 14px;
   padding: 8px 12px;
   border-radius: 5px;
   cursor: pointer;
-  margin-right: 5px;
+  flex: 1;
+  text-align: center;
 }
+
 .ursac-post-action i {
   margin-right: 5px;
+  color: #0078ff;
 }
+
 .ursac-post-action:hover {
-  background-color: #f0f2f5;
+  background-color: #e4e6eb;
 }
+
 .ursac-post-button {
-  padding: 8px 20px;
+  width: 100%;
+  padding: 10px;
   background-color: #0078ff;
   color: white;
   border: none;
@@ -649,10 +714,13 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
+  margin-top: 20px;
 }
+
 .ursac-post-button:hover:not(:disabled) {
   background-color: #0066cc;
 }
+
 .ursac-post-button:disabled {
   background-color: #cccccc;
   cursor: not-allowed;
@@ -662,18 +730,27 @@ body {
 .ursac-posts-feed {
   margin-top: 20px;
 }
+
 .ursac-post-card {
   background-color: white;
-  border-radius: 10px;
+  border-radius: 5px;
   padding: 15px;
   margin-bottom: 15px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
+
 .ursac-post-header {
   display: flex;
   align-items: center;
   margin-bottom: 10px;
+  justify-content: space-between;
 }
+
+.ursac-post-user {
+  display: flex;
+  align-items: center;
+}
+
 .ursac-post-avatar {
   width: 40px;
   height: 40px;
@@ -687,14 +764,17 @@ body {
   color: #555;
   font-weight: bold;
 }
+
 .ursac-post-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
+
 .ursac-post-user-info {
   flex: 1;
 }
+
 .ursac-post-username {
   font-weight: 600;
   color: #333;
@@ -702,42 +782,50 @@ body {
   display: flex;
   align-items: center;
 }
+
 .ursac-post-user-course {
   color: #0078ff;
   font-weight: normal;
   font-size: 13px;
   margin-left: 5px;
 }
+
 .ursac-post-meta {
   color: #65676b;
   font-size: 12px;
 }
+
 .ursac-post-options {
   color: #65676b;
   cursor: pointer;
   font-size: 20px;
 }
+
 .ursac-post-content {
   margin-bottom: 15px;
   font-size: 14px;
   line-height: 1.4;
 }
+
 .ursac-post-media {
   margin: 10px 0;
   border-radius: 8px;
   overflow: hidden;
   max-height: 400px;
 }
+
 .ursac-post-media img {
   width: 100%;
   max-height: 400px;
   object-fit: contain;
 }
+
 .ursac-post-media video {
   width: 100%;
   max-height: 400px;
   object-fit: contain;
 }
+
 .ursac-post-attachment {
   display: flex;
   align-items: center;
@@ -746,33 +834,40 @@ body {
   border-radius: 8px;
   margin: 10px 0;
 }
+
 .ursac-post-attachment i {
   font-size: 24px;
   margin-right: 10px;
   color: #0078ff;
 }
+
 .ursac-post-attachment-info {
   flex: 1;
 }
+
 .ursac-post-attachment-name {
   font-weight: 500;
   font-size: 14px;
 }
+
 .ursac-post-attachment-size {
   font-size: 12px;
   color: #65676b;
 }
+
 .ursac-post-attachment-download {
   color: #0078ff;
   font-size: 14px;
   cursor: pointer;
 }
+
 .ursac-post-footer {
   display: flex;
   justify-content: space-between;
   padding-top: 10px;
   border-top: 1px solid #e4e6eb;
 }
+
 .ursac-post-stat {
   display: flex;
   align-items: center;
@@ -782,12 +877,15 @@ body {
   padding: 5px 10px;
   border-radius: 5px;
 }
+
 .ursac-post-stat:hover {
   background-color: #f0f2f5;
 }
+
 .ursac-post-stat i {
   margin-right: 5px;
 }
+
 .ursac-post-stat-active {
   color: #0078ff;
 }
@@ -795,24 +893,35 @@ body {
 /* Right sidebar styles */
 .ursac-sidebar-right {
   position: fixed;
-  top: 60px;
+  top: 0;
   right: 0;
   bottom: 0;
-  width: 418px;
+  width: 300px;
   background-color: white;
   padding: 20px;
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.05);
   overflow-y: auto;
   z-index: 90;
 }
+
 .ursac-sidebar-section {
   margin-bottom: 25px;
 }
+
 .ursac-sidebar-title {
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 15px;
   color: #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ursac-sidebar-title i {
+  font-size: 14px;
+  cursor: pointer;
+  color: #0078ff;
 }
 
 /* Forums styles */
@@ -821,6 +930,7 @@ body {
   flex-direction: column;
   gap: 10px;
 }
+
 .ursac-forum-item {
   display: flex;
   align-items: center;
@@ -830,9 +940,11 @@ body {
   transition: background-color 0.2s;
   cursor: pointer;
 }
+
 .ursac-forum-item:hover {
   background-color: #e4e6eb;
 }
+
 .ursac-forum-icon {
   width: 40px;
   height: 40px;
@@ -844,13 +956,16 @@ body {
   justify-content: center;
   margin-right: 10px;
 }
+
 .ursac-forum-info {
   flex: 1;
 }
+
 .ursac-forum-name {
   font-weight: 500;
   font-size: 14px;
 }
+
 .ursac-forum-count {
   font-size: 12px;
   color: #65676b;
@@ -862,6 +977,7 @@ body {
   flex-direction: column;
   gap: 10px;
 }
+
 .ursac-event-item {
   display: flex;
   align-items: center;
@@ -871,9 +987,11 @@ body {
   transition: background-color 0.2s;
   cursor: pointer;
 }
+
 .ursac-event-item:hover {
   background-color: #e4e6eb;
 }
+
 .ursac-event-date {
   width: 40px;
   height: 40px;
@@ -886,21 +1004,26 @@ body {
   justify-content: center;
   margin-right: 10px;
 }
+
 .ursac-event-month {
   font-size: 10px;
   font-weight: 500;
 }
+
 .ursac-event-day {
   font-size: 16px;
   font-weight: 700;
 }
+
 .ursac-event-info {
   flex: 1;
 }
+
 .ursac-event-name {
   font-weight: 500;
   font-size: 14px;
 }
+
 .ursac-event-location {
   font-size: 12px;
   color: #65676b;
@@ -912,6 +1035,7 @@ body {
   flex-direction: column;
   gap: 10px;
 }
+
 .ursac-friend-item {
   display: flex;
   align-items: center;
@@ -921,9 +1045,11 @@ body {
   transition: background-color 0.2s;
   cursor: pointer;
 }
+
 .ursac-friend-item:hover {
   background-color: #e4e6eb;
 }
+
 .ursac-friend-avatar {
   width: 40px;
   height: 40px;
@@ -938,11 +1064,13 @@ body {
   color: #555;
   font-weight: bold;
 }
+
 .ursac-friend-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
+
 .ursac-friend-status {
   position: absolute;
   bottom: 0;
@@ -952,19 +1080,24 @@ body {
   border-radius: 50%;
   border: 2px solid white;
 }
+
 .ursac-status-online {
   background-color: #42b72a;
 }
+
 .ursac-status-offline {
   background-color: #65676b;
 }
+
 .ursac-friend-info {
   flex: 1;
 }
+
 .ursac-friend-name {
   font-weight: 500;
   font-size: 14px;
 }
+
 .ursac-friend-course {
   font-size: 12px;
   color: #65676b;
@@ -983,6 +1116,7 @@ body {
   align-items: center;
   justify-content: center;
 }
+
 .ursac-upload-content {
   background-color: white;
   padding: 20px;
@@ -990,6 +1124,7 @@ body {
   width: 300px;
   text-align: center;
 }
+
 .ursac-progress-container {
   width: 100%;
   height: 10px;
@@ -998,12 +1133,14 @@ body {
   margin: 15px 0;
   overflow: hidden;
 }
+
 .ursac-progress-bar {
   height: 100%;
   background-color: #0078ff;
   width: 0;
   transition: width 0.3s;
 }
+
 .ursac-upload-status {
   font-size: 14px;
   font-weight: 500;
@@ -1014,78 +1151,97 @@ body {
   .ursac-sidebar-right {
     width: 250px;
   }
+  
+  .ursac-content-main {
+    margin-right: 250px;
+  }
 }
+
 @media (max-width: 992px) {
   .ursac-sidebar-right {
     display: none;
   }
+  
   .ursac-content-main {
     margin-right: 0;
   }
 }
+
 @media (max-width: 768px) {
   .ursac-sidebar-left {
     width: 70px;
   }
-  .ursac-menu-item span {
-    display: none;
-  }
+  
   .ursac-menu-item i {
     margin-right: 0;
+    font-size: 24px; /* Adjusted for smaller screens */
   }
+  
   .ursac-content-main {
     margin-left: 70px;
   }
+  
   .ursac-post-mobile-btn {
     padding: 10px 0;
   }
+  
   .ursac-post-mobile-btn span {
     display: none;
   }
+  
   .ursac-post-mobile-btn:after {
     content: "+";
     font-size: 20px;
   }
+  
   .ursac-post-action span {
     display: none;
   }
 }
+
 @media (max-width: 576px) {
   .ursac-header-search {
     max-width: 150px;
   }
+  
   .ursac-user-name {
     display: none;
   }
+  
   .ursac-create-post-header {
     flex-direction: column;
     align-items: flex-start;
   }
+  
   .ursac-create-post-avatar-container {
     margin-right: 0;
     margin-bottom: 10px;
   }
+  
   .ursac-post-input {
     width: 100%;
   }
+  
   .ursac-post-textarea {
     min-height: 80px;
   }
+  
   .ursac-media-preview {
     gap: 5px;
   }
+  
   .ursac-preview-item {
     width: 80px;
     height: 80px;
   }
+  
   .ursac-post-footer {
     flex-direction: column;
     gap: 10px;
   }
+  
   .ursac-post-stat {
     width: 100%;
     justify-content: center;
   }
 }
-
-

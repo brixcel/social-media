@@ -10,21 +10,19 @@
 </head>
 <body>
   <!-- Header -->
-  <header class="ursac-header">
-    <div class="ursac-header-logo">
-      <a href="#">URSAC Hub</a>
-    </div>
-    <div class="ursac-header-search">
-      <input type="text" id = "search-input" placeholder="Search..." />
-    </div>
-    <div class="ursac-header-profile" id="user-profile">
-      <!-- User profile will be populated by JavaScript -->
-    </div>
-  </header>
+ 
+    
+   
+   
+ 
 
   <div class="ursac-container">
     <!-- Left Sidebar -->
+    
     <div class="ursac-sidebar-left">
+    <div class="ursac-header-logo">
+      <a href="#">URSAC Hub</a>
+    </div>
       <div class="ursac-sidebar-menu">
         <a href="#" class="ursac-menu-item ursac-menu-active">
           <i class="fas fa-home"></i>
@@ -50,16 +48,21 @@
           <i class="fas fa-cog"></i>
           <span>Settings</span>
         </a>
+        <div class="ursac-header-profile" id="user-profile">
+      <!-- User profile will be populated by JavaScript -->
+    </div>
       </div>
      
     </div>
     
     <!-- Main Content -->
     <div class="ursac-content-main">
+    <div class="ursac-header-search">
+      <input type="text" id = "search-input" placeholder="Search..." />
+    </div>
       <!-- Tabs -->
       <div class="ursac-content-tabs">
         <div class="ursac-tab ursac-tab-active">Posts</div>
-        <div class="ursac-tab">Questions</div>
       </div>
       
       <!-- Create Post -->
