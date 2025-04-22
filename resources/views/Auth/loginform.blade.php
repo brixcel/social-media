@@ -96,7 +96,15 @@
           const snapshot = await firebase.database().ref('users/' + user.uid).once('value');
           const userData = snapshot.val();
           
-          return { success: true, user, userData };
+          if (userData && userData.role === 'admin') {
+            window.location.href = '/admin';
+          } else {
+            window.location.href = '/homepage';
+          }
+
+          return { success: true, user, userData }; 
+
+
         } else {
           const snapshot = await firebase.database()
             .ref('users')
@@ -165,7 +173,13 @@
         }
         
         alert('Login successful! Welcome, ' + (result.userData.firstName || 'User'));
-        window.location.href = '/homepage';
+        if (result.userData && result.userData.role === 'admin') {
+          window.location.href = '/admin';
+        } else {
+          window.location.href = '/homepage';
+        }
+
+
       } else {
         console.error('Login failed:', result.error);
         alert('Login failed: ' + result.error);
@@ -195,7 +209,13 @@
                   ...userData
                 }));
                 
-                alert('Google login successful! Welcome, ' + (userData.firstName || user.displayName || 'User'));
+                alert('Google login successful! Welcome, ' + (userData.firstName || user.displayName || 'User'));                
+                if (userData && userData.role === 'admin') {
+                  window.location.href = '/admin';
+                } else {
+                  window.location.href = '/homepage';
+                }
+
               } else {
                 firebase.database().ref('users/' + user.uid).set({
                   firstName: user.displayName ? user.displayName.split(' ')[0] : '',

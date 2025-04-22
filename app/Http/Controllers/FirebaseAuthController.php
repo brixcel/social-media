@@ -5,13 +5,14 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Kreait\Firebase\Factory; // Correct the namespace for the Factory
 
+use Illuminate\Support\Facades\Session;
 class FirebaseAuthController extends Controller
 {
     protected $auth;
 
     public function __construct()
     {
-        $path = base_path('storage/firebase/firebase.json');
+        $path = base_path('storage/firebase/firebase_credentials.json');
 
         if (!file_exists($path)) {
             die("This file path {$path} does not exist");
@@ -50,10 +51,21 @@ class FirebaseAuthController extends Controller
         // Get Firebase user data
         $firebaseUser = $this->auth->getUserByEmail($request->email);
 
-        // Hardcoded role check
         $role = ($request->email === 'admin@example.com') ? 'admin' : 'user';
 
-        // Store session
+        if ($role === 'admin') {
+            // Save to 'admins' node
+            $this->saveAdminData($firebaseUser->uid, $request->email);
+        }
+
+        // Store user data in Firestore under 'users' collection
+        $this->saveUserData($firebaseUser->uid, [
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
+            'middlename' => $request->middlename,
+            'email' => $request->email,
+            'role' => $role, // Include the role here
+        ]);
         Session::put('firebaseUserId', $firebaseUser->uid);
         Session::put('firebaseUserEmail', $firebaseUser->email);
         Session::put('firebaseUserRole', $role);
@@ -65,6 +77,31 @@ class FirebaseAuthController extends Controller
         return response()->json(['error' => $e->getMessage()], 400);
     }
 }
+
+protected function saveAdminData($uid, $email)
+{
+    $database = (new Factory)
+        ->withServiceAccount(base_path('storage/firebase/firebase.json'))
+        ->createDatabase();
+
+    $adminsRef = $database->getReference('admins');
+    $adminsRef->getChild($uid)->set([
+        'email' => $email,
+    ]);
+}
+
+protected function saveUserData($uid, $data)
+{
+    $database = (new Factory)
+        ->withServiceAccount(base_path('storage/firebase/firebase.json'))
+        ->createDatabase();
+
+    $usersRef = $database->getReference('users');
+    $usersRef->getChild($uid)->set($data);
+}
+
+
+
 
     public function login(Request $request)
     {
@@ -98,6 +135,30 @@ class FirebaseAuthController extends Controller
         Session::forget('firebaseUserEmail');
         
         return redirect()->route('login');
+    }
+    private function authenticateWithFirebase($email, $password)
+    {
+        try {
+            $signInResult = $this->auth->signInWithEmailAndPassword($email, $password);
+            $user = $signInResult->data();
+
+            // Fetch additional user data from Firestore (including role)
+            $database = (new Factory)
+                ->withServiceAccount(base_path('storage/firebase/firebase.json'))
+                ->createDatabase();
+
+            $userRef = $database->getReference('users/' . $user['localId']);
+            $snapshot = $userRef->getSnapshot();
+            $userData = $snapshot->getValue();
+
+            return [
+                'uid' => $user['localId'],
+                'email' => $email,
+                'role' => $userData['role'] ?? 'user', // Default to 'user' if role is not found
+            ];
+        } catch (\Kreait\Firebase\Exception\Auth\InvalidUserCredentials $e) {
+            return null;
+        }
     }
 }
 

@@ -17,10 +17,15 @@ class PostController extends Controller
 
     public function index()
     {
-        $posts = $this->database->getReference('posts')->getValue();
-        return view('admin.posts.index', compact('posts'));
-    }
+        $snapshot = $this->database->getReference('posts')->getSnapshot();
+        $posts = [];
 
+        foreach ($snapshot->getChildren() as $childSnapshot) {
+            $posts[$childSnapshot->getKey()] = $childSnapshot->getValue();
+        }
+
+        return view('admin.posts.index', ['posts' => $posts]);
+    }
     public function create()
     {
         return view('admin.posts.create');

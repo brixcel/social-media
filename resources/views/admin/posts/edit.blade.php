@@ -12,7 +12,9 @@
         
         <div class="mb-4">
             <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
-            <input type="text" name="title" id="title" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" value="{{ old('title', $post['title']) }}" required>
+            <input type="text" name="title" id="title" 
+                class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" 
+                value="{{ old('title', $post['title'] ?? '') }}" required>
             @error('title')
                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
             @enderror
@@ -20,7 +22,8 @@
         
         <div class="mb-4">
             <label for="content" class="block text-sm font-medium text-gray-700 mb-1">Content</label>
-            <textarea name="content" id="content" rows="10" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required>{{ old('content', $post['content']) }}</textarea>
+            <textarea name="content" id="content" rows="10" 
+                class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required>{{ old('content', $post['content'] ?? '') }}</textarea>
             @error('content')
                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
             @enderror
@@ -28,9 +31,10 @@
         
         <div class="mb-4">
             <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select name="status" id="status" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                <option value="draft" {{ old('status', $post['status']) == 'draft' ? 'selected' : '' }}>Draft</option>
-                <option value="published" {{ old('status', $post['status']) == 'published' ? 'selected' : '' }}>Published</option>
+            <select name="status" id="status" 
+                class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                <option value="draft" {{ old('status', $post['status'] ?? '') == 'draft' ? 'selected' : '' }}>Draft</option>
+                <option value="published" {{ old('status', $post['status'] ?? '') == 'published' ? 'selected' : '' }}>Published</option>
             </select>
             @error('status')
                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
@@ -47,7 +51,6 @@
 </div>
 
 <script>
-    // You can add a WYSIWYG editor here for the content field
-    // For example, using TinyMCE or CKEditor
+    // Optionally integrate TinyMCE or CKEditor here
 </script>
 @endsection

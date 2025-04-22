@@ -12,7 +12,7 @@ class FirebaseService
     public function __construct()
     {
         $factory = (new Factory)
-            ->withServiceAccount(base_path('storage/firebase/firebase_credentials.json'))
+            ->withServiceAccount(base_path(config('firebase.credentials'))) // Use config value
             ->withDatabaseUri('https://social-media-8c5ba-default-rtdb.firebaseio.com/');
 
         $this->database = $factory->createDatabase();
@@ -22,7 +22,7 @@ class FirebaseService
     {
         return $this->database;
     }
-    
+
     public function getPosts()
     {
         return $this->database->getReference('posts')->getValue();

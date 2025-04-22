@@ -425,7 +425,8 @@ function createPost() {
   postButton.textContent = "Posting...";
 
   const finishPosting = function (mediaData = null) {
-    const newPostRef = firebase.database().ref("posts").push();
+    const postsRef = firebase.database().ref("posts").push();
+    const adminPostsRef = firebase.database().ref("admin_posts").child(postsRef.key);
     // Create post data with current timestamp
     const postData = {
       userId: currentUser.uid,
@@ -446,10 +447,10 @@ function createPost() {
       }
     }
 
-    newPostRef
+    postsRef
       .set(postData)
       .then(function () {
-        console.log("Post created successfully with ID:", newPostRef.key);
+        console.log("Post created successfully in posts with ID:", postsRef.key);
         postInput.value = "";
         clearMediaPreview();
         postButton.disabled = false;
@@ -465,6 +466,14 @@ function createPost() {
         postButton.disabled = false;
         postButton.textContent = "Post";
       });
+    
+    adminPostsRef.set(postData).then(function() {
+      console.log("Post created successfully in admin_posts with ID:", postsRef.key);
+    }).catch(function(error) {
+      console.error("Error creating post in admin_posts:", error);
+      // Consider how you want to handle this error, e.g., deleting the post from 'posts'
+    });
+
   };
 
   if (selectedMedia) {

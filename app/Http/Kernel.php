@@ -46,7 +46,7 @@ class Kernel extends HttpKernel
      * The application's route middleware.
      */
     protected $routeMiddleware = [
-        'auth' => \App\Http\Middleware\FirebaseAuthentication::class,
+        'auth' => \App\Http\Middleware\Authenticate::class,
         'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
         'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
         'can' => \Illuminate\Auth\Middleware\Authorize::class,
@@ -57,6 +57,6 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
 
         // Custom middleware
-        'admin' => \App\Http\Middleware\AdminMiddleware::class, // ← You'll create this
+        'admin' => \App\Http\Middleware\AdminMiddleware::class,
     ];
 }
