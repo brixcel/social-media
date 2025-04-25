@@ -5,7 +5,7 @@
 
 @section('content')
 <div class="mb-4">
-    <a href="{{ route('posts.create') }}" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">
+    <a href="" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">
         Create New Post
     </a>
 </div>

@@ -13,9 +13,9 @@
         <div class="w-64 bg-gray-800 text-white min-h-screen p-4">
             <div class="text-xl font-bold mb-8">Admin CMS</div>
             <nav>
-                <a href="{{ route('/admin/dashboard') }}" class="block py-2 px-4 rounded hover:bg-gray-700 mb-1">Dashboard</a>
-                <a href="{{ route('/admin/posts') }}" class="block py-2 px-4 rounded hover:bg-gray-700 mb-1">Posts</a>
-                <a href="{{ route('/pages') }}" class="block py-2 px-4 rounded hover:bg-gray-700 mb-1">Pages</a>
+                <a href="{{ route('admin.dashboard') }}" class="block py-2 px-4 rounded hover:bg-gray-700 mb-1">Dashboard</a>
+                <a href="{{ route('admin.posts') }}" class="block py-2 px-4 rounded hover:bg-gray-700 mb-1">Posts</a>
+                <a href="{{ route('admin.pages') }}" class="block py-2 px-4 rounded hover:bg-gray-700 mb-1">Pages</a>
                 <a href="#" class="block py-2 px-4 rounded hover:bg-gray-700 mb-1">Users</a>
                 <a href="#" class="block py-2 px-4 rounded hover:bg-gray-700 mb-1">Settings</a>
                 <form method="POST" action="{{ route('logout') }}" class="mt-8">
