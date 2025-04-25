@@ -13,6 +13,7 @@ class PostController extends Controller
     public function __construct(Database $database)
     {
         $this->database = $database;
+        
     }
 
     public function index()

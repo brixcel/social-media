@@ -19,12 +19,10 @@
   
   body {
     min-height: 100vh;
-    display: flex;
     align-items: center;
     justify-content: center;
     background: var(--bg-gradient);
     color: var(--text-dark);
-    padding: 20px;
   }
   
   /* CONTAINER */
@@ -318,17 +316,14 @@ body {
   align-items: center;
   justify-content: center;
   padding: 0 20px;
-  z-index: 100;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .ursac-header-logo {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 2rem;
+  font-weight: bolder;
   font-style: italic;
-  margin-bottom: 30px;
   display: flex;
-  justify-content: center;
   align-items: center;
 }
 
@@ -359,7 +354,6 @@ body {
   align-items: center;
   margin-top: auto;
   padding: 15px;
-  border-top: 1px solid #e4e6eb;
 }
 
 .ursac-user-avatar {
@@ -393,13 +387,11 @@ body {
   top: 0;
   left: 0;
   bottom: 0;
-  width: 220px;
-  background-color: white;
+  width: 20%;
   padding: 20px 0 0 0;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
-  z-index: 90;
+  margin-left:7% ;
 }
 
 .ursac-sidebar-menu {
@@ -409,30 +401,31 @@ body {
 }
 
 .ursac-menu-item {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px 20px;
-  color: #444;
+  display: grid;
+  grid-template-columns: 4% 1fr;
+  gap: 50px;
+  padding: 25px 0;
+  margin-top: 5px;
+  color: var(--white);
   text-decoration: none;
   font-weight: 500;
-  transition: background-color 0.2s;
+  transition:0.5s; 
+  border-radius: 50px;
+  margin-right: 20px;
 }
 
 .ursac-menu-item:hover {
-  background-color: var(--main-color);
+  background-color: var(--white);
+  color: var(--main-color);
+  padding: 25px 30px;
 }
 
-.ursac-menu-active {
-  color: #444;
-}
+/* .ursac-menu-active {
+  background-color: var(--white);
+} */
 
 .ursac-menu-item i {
-  font-size: 28px; /* Increased from 18px */
-  width: 100%;
-  text-align: center;
-  align-items: center;
-  justify-content: center;
+  font-size: 28px; /* Increased from 18px */  
 }
 
 
@@ -456,12 +449,12 @@ body {
 /* Main content styles */
 .ursac-content-main {
   flex: 10;
-  padding: 20px;
-  margin-left: 220px;
-  margin-right: 300px;
+  padding: 20px 50px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  max-width: 50%;
+  margin: 0 auto;
 }
 
 .ursac-content-tabs {
@@ -654,7 +647,6 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 5px 0;
-  border-top: 1px solid #e4e6eb;
   padding-top: 10px;
 }
 
@@ -881,12 +873,10 @@ body {
   top: 0;
   right: 0;
   bottom: 0;
-  width: 300px;
-  background-color: white;
+  width: 20%;
   padding: 20px;
-  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.05);
   overflow-y: auto;
-  z-index: 90;
+  margin-right:6%;
 }
 
 .ursac-sidebar-section {
@@ -897,7 +887,7 @@ body {
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 15px;
-  color: #333;
+  color: var(--white);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -906,7 +896,7 @@ body {
 .ursac-sidebar-title i {
   font-size: 14px;
   cursor: pointer;
-  color: #0078ff;
+  color: var(--main-color);
 }
 
 /* Forums styles */
@@ -921,7 +911,7 @@ body {
   align-items: center;
   padding: 10px;
   border-radius: 8px;
-  background-color: #f0f2f5;
+  background-color: var(--white);
   transition: background-color 0.2s;
   cursor: pointer;
 }
@@ -968,7 +958,7 @@ body {
   align-items: center;
   padding: 10px;
   border-radius: 8px;
-  background-color: #f0f2f5;
+  background-color: var(--white);
   transition: background-color 0.2s;
   cursor: pointer;
 }
@@ -1026,7 +1016,7 @@ body {
   align-items: center;
   padding: 10px;
   border-radius: 8px;
-  background-color: #f0f2f5;
+  background-color: var(--white);
   transition: background-color 0.2s;
   cursor: pointer;
 }

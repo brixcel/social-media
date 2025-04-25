@@ -15,7 +15,7 @@ Route::post('/login', [FirebaseAuthController::class, 'login'])->name('login.pro
 Route::get('/homepage', [FirebaseAuthController::class, 'homepage']);
 Route::post('/logout', [FirebaseAuthController::class, 'logout'])->name('logout');
 Route::get('/admin', [DashboardController::class, 'index']);
-Route::get('/admin/dashboard', [DashboardController::class, 'dashboard']);
+Route::get('/admin/dashboard', [DashboardController::class, 'dashboard'])->name('admin.dashboard');
 
 // Admin routes with proper middleware
 // Route::middleware(['admin'])->prefix('admin')->group(function () {
@@ -27,7 +27,8 @@ Route::get('/admin/dashboard', [DashboardController::class, 'dashboard']);
 
 
 Route::prefix('admin')->name('admin.')->group(function () {
-    Route::get('/posts', [PostController::class, 'index'])->name('posts.index');
+    Route::get('/posts', [PostController::class, 'index'])->name('posts');
+    Route::get('/pages', [PostController::class, 'index'])->name('pages');
     Route::get('/posts/create', [PostController::class, 'create'])->name('posts.create');
     Route::post('/posts', [PostController::class, 'store'])->name('posts.store');
     Route::get('/posts/{id}/edit', [PostController::class, 'edit'])->name('posts.edit');
