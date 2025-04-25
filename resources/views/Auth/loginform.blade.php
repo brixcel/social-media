@@ -47,7 +47,7 @@
         <div class="form-footer">
           <a href="#" class="forgot-password">Forgot Password?</a>
           <div class="remember-me">
-            <label for="remember-me">Remember Me</label>
+            <label for="remember-me">Save Login</label>
             <input type="checkbox" id="remember-me" />
           </div>
         </div>
