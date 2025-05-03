@@ -6,6 +6,8 @@ use App\Http\Controllers\FirebaseAuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\PageController;
+use App\Http\Controllers\VerificationController;
+
 
 // Auth routes
 Route::get('/register', [FirebaseAuthController::class, 'registerForm']);
@@ -16,7 +18,8 @@ Route::get('/homepage', [FirebaseAuthController::class, 'homepage']);
 Route::post('/logout', [FirebaseAuthController::class, 'logout'])->name('logout');
 Route::get('/admin', [DashboardController::class, 'index']);
 Route::get('/admin/dashboard', [DashboardController::class, 'dashboard'])->name('admin.dashboard');
-
+Route::get('/notifications', [FirebaseAuthController::class, 'notifications'])->name('notifications');
+Route::get('/messages', [FirebaseAuthController::class, 'messages'])->name('messages');
 // Admin routes with proper middleware
 // Route::middleware(['admin'])->prefix('admin')->group(function () {
 //     Route::get('/', [DashboardController::class, 'index'])->name('admin.dashboard');
@@ -28,7 +31,7 @@ Route::get('/admin/dashboard', [DashboardController::class, 'dashboard'])->name(
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/posts', [PostController::class, 'index'])->name('posts');
-    Route::get('/pages', [PostController::class, 'index'])->name('pages');
+    Route::get('/pages', [PageController::class, 'index'])->name('pages');
     Route::get('/posts/create', [PostController::class, 'create'])->name('posts.create');
     Route::post('/posts', [PostController::class, 'store'])->name('posts.store');
     Route::get('/posts/{id}/edit', [PostController::class, 'edit'])->name('posts.edit');
@@ -39,3 +42,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 Route::get('/', function() {
     return view('welcome');
 });
+
+
+
+// Add this route for handling post creation from homepage
+Route::post('/create-post', [PostController::class, 'storeFromHomepage'])->name('posts.storeFromHomepage');

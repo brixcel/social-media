@@ -4,35 +4,31 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>URSAC Hub - Home</title>
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="main.css">
+  
 </head>
 <body>
-  <!-- Header -->
- 
-    
-   
-   
- 
-
   <div class="ursac-container">
     <!-- Left Sidebar -->
-    
     <div class="ursac-sidebar-left">
-    <div class="ursac-header-logo">
-      <a href="#">URSAC Hub</a>
-    </div>
+      <div class="ursac-header-logo">
+        <a href="#">URSAC Hub</a>
+      </div>
       <div class="ursac-sidebar-menu">
         <a href="#" class="ursac-menu-item ursac-menu-active">
           <i class="fas fa-home"></i>
           <span>Home</span>
         </a>
-        <a href="#" class="ursac-menu-item">
-          <i class="fas fa-bell"></i>
+        <a href="{{ route('notifications') }}" class="ursac-menu-item">
+          <i class="fas fa-bell ursac-notification-indicator">
+            <span class="ursac-notification-badge"></span>
+          </i>
           <span>Notifications</span>
         </a>
-        <a href="#" class="ursac-menu-item">
+        <a href="" class="ursac-menu-item">
           <i class="fas fa-comment"></i>
           <span>Messages</span>
         </a>
@@ -48,22 +44,43 @@
           <i class="fas fa-cog"></i>
           <span>Settings</span>
         </a>
-        <div class="ursac-header-profile" id="user-profile">
-      <!-- User profile will be populated by JavaScript -->
-    </div>
+        
+        <!-- Post Button (After Settings) -->
+        <button class="ursac-sidebar-post-btn" id="open-post-modal">
+          <i class="fas fa-plus"></i>
+          <span>Post</span>
+        </button>
+        
+        <!-- User Profile Button -->
+        <div class="ursac-header-profile" id="user-profile-btn">
+          <!-- Will be populated by JS with user profile info -->
+        </div>
+        
+        <!-- User Profile Dropdown -->
+        <div class="ursac-profile-dropdown" id="user-profile-dropdown">
+          <div class="ursac-profile-dropdown-item" id="add-account-btn">
+            <i class="fas fa-user-plus"></i>
+            <span>Add an existing account</span>
+          </div>
+          <div class="ursac-profile-dropdown-item" id="logout-btn">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Log out</span>
+          </div>
+        </div>
       </div>
-     
     </div>
     
     <!-- Main Content -->
     <div class="ursac-content-main">
-    <div class="ursac-header-search">
-      <input type="text" id = "search-input" placeholder="Search..." />
-    </div>
+      <div class="ursac-header-search">
+        <input type="text" id="search-input" placeholder="Search..." />
+      </div>
+      
       <!-- Tabs -->
       <div class="ursac-content-tabs">
         <div class="ursac-tab ursac-tab-active">Posts</div>
       </div>
+      
       
       <!-- Create Post -->
       <div class="ursac-create-post">
@@ -112,7 +129,44 @@
       
       <!-- Posts Feed -->
       <div class="ursac-posts-feed" id="posts-feed">
-        <!-- Posts will be loaded dynamically -->
+        <div class="ursac-post-card">
+          <!-- ... existing post content ... -->
+          
+          <div class="ursac-post-footer">
+            <div class="ursac-post-stat" onclick="likePost('${postId}')">
+              <i class="far fa-heart"></i>
+              <span class="like-count">0</span>
+            </div>
+            <div class="ursac-post-stat" onclick="toggleComments(this)">
+              <i class="far fa-comment"></i>
+              <span class="comment-count">0</span>
+            </div>
+            <div class="ursac-post-stat" onclick="sharePost('${postId}')">
+              <i class="far fa-share-square"></i>
+            </div>
+          </div>
+
+          <!-- Add comment section -->
+          <div class="ursac-post-comments" style="display: none;">
+            <div class="ursac-comment-input-wrapper">
+              <div class="ursac-comment-avatar">
+                <!-- User initials will be added dynamically -->
+              </div>
+              <div class="ursac-comment-input-container">
+                <input type="text" class="ursac-comment-input" placeholder="Write a comment...">
+                <button class="ursac-comment-submit">
+                  <i class="fas fa-paper-plane"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div class="ursac-comments-list">
+              <div class="ursac-no-comments">
+                No comments yet. Be the first to comment!
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     
@@ -207,6 +261,27 @@
     </div>
   </div>
 
+  <!-- Post Modal -->
+  <div class="ursac-upload-modal" id="post-modal" style="display:none;z-index:2000;">
+    <div class="ursac-upload-content" style="max-width:400px;">
+      <h3 style="margin-bottom:10px;">What's happening?</h3>
+      <textarea id="modal-post-content" class="ursac-post-textarea" placeholder="What's happening?" style="margin-bottom:10px;"></textarea>
+      <div class="ursac-media-preview" id="modal-media-preview"></div>
+      <div class="ursac-post-actions">
+        <div class="ursac-post-action-group">
+          <label for="modal-file-photo" class="ursac-post-action"><i class="fas fa-image"></i></label>
+          <input type="file" id="modal-file-photo" accept="image/*" style="display:none;">
+          <label for="modal-file-video" class="ursac-post-action"><i class="fas fa-video"></i></label>
+          <input type="file" id="modal-file-video" accept="video/*" style="display:none;">
+          <label for="modal-file-attachment" class="ursac-post-action"><i class="fas fa-paperclip"></i></label>
+          <input type="file" id="modal-file-attachment" style="display:none;">
+        </div>
+        <button class="ursac-post-button" id="modal-post-button" disabled>Post</button>
+      </div>
+      <button class="ursac-post-button" id="close-post-modal" style="background:var(--gray);margin-top:10px;">Cancel</button>
+    </div>
+  </div>
+  
   <!-- File upload progress modal -->
   <div class="ursac-upload-modal" id="upload-modal">
     <div class="ursac-upload-content">
@@ -239,6 +314,50 @@
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
   </script>
+  <script>
+  // Debug functions
+  function debugFirebaseConnection() {
+    try {
+      const app = firebase.app();
+      console.log("Firebase successfully initialized");
+      
+      // Add this to check auth state
+      firebase.auth().onAuthStateChanged(function(user) {
+        console.log("Auth state changed:", user ? "User logged in" : "No user");
+      });
+    } catch (error) {
+      console.error("Firebase initialization error:", error);
+    }
+  }
+  function checkCsrfToken() {
+    const token = document.querySelector('meta[name="csrf-token"]');
+    if (token) {
+      console.log("CSRF token found:", token.getAttribute('content').substring(0, 10) + "...");
+    } else {
+      console.error("CSRF token not found in the page!");
+    }
+  }
+
+  // Run debug functions when page loads
+  document.addEventListener("DOMContentLoaded", function() {
+    console.log("Running diagnostics...");
+    debugFirebaseConnection();
+    checkCsrfToken();
+    
+    // Test if DOM elements exist
+    const elements = [
+      "post-input", "post-button", "posts-feed", "media-preview", 
+      "file-photo", "file-video", "file-attachment", "user-profile-btn",
+      "user-profile-dropdown", "logout-btn", "add-account-btn", "open-post-modal"
+    ];
+    
+    elements.forEach(id => {
+      const el = document.getElementById(id);
+      console.log(`Element #${id} ${el ? "exists" : "MISSING!"}`);
+    });
+  });
+</script>
   <script src="script.js"></script>
+  <script src="notifications.js"></script>
 </body>
 </html>

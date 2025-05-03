@@ -2,9 +2,73 @@ const firebase = window.firebase;
 let currentUser = null;
 let selectedMedia = null;
 let postsLoaded = false;
-let postsListener = null; // Track the posts listener
+let postsListener = null;
+let userProfileBtn = null;
+let profileDropdown = null;
+let logoutBtn = null;
+let addAccountBtn = null;
+let notificationsListener = null;
 
-document.addEventListener("DOMContentLoaded", function () {
+// Add this helper function at the top level of your script.js file
+function getInitials(firstName, lastName) {
+  let initials = '';
+  if (firstName) initials += firstName.charAt(0).toUpperCase();
+  if (lastName) initials += lastName.charAt(0).toUpperCase();
+  return initials || '?';
+}
+
+// Move loadUserProfile function here, outside DOMContentLoaded
+function loadUserProfile(user) {
+  if (!user) {
+    console.log("No user provided to loadUserProfile");
+    return;
+  }
+
+  console.log("Loading profile for user:", user.uid);
+  
+  firebase.database().ref("users/" + user.uid).once("value")
+    .then(function(snapshot) {
+      const userData = snapshot.val();
+      console.log("User data:", userData);
+      
+      // Use the global userProfileBtn instead of creating a new local variable
+      if (userData && userProfileBtn) {
+        const initials = getInitials(userData.firstName, userData.lastName);
+        const fullName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim();
+        
+        // Update profile button
+        userProfileBtn.innerHTML = `
+          <div class="ursac-profile-avatar">
+            <span>${initials}</span>
+          </div>
+          <div class="ursac-profile-info">
+            <div class="ursac-profile-name">${fullName}</div>
+            <div class="ursac-profile-email">${user.email}</div>
+          </div>
+          <i class="fas fa-chevron-down"></i>
+        `;
+
+        // Update create post area
+        const createPostAvatar = document.getElementById("create-post-avatar");
+        const createPostUsername = document.getElementById("create-post-username");
+        
+        if (createPostAvatar) {
+          createPostAvatar.innerHTML = `<span>${initials}</span>`;
+        }
+        if (createPostUsername) {
+          createPostUsername.textContent = fullName;
+        }
+      } else {
+        console.error("User data or profile button not found");
+      }
+    })
+    .catch(function(error) {
+      console.error("Error loading user profile:", error);
+    });
+}
+
+// Add document ready check at the beginning of the file
+document.addEventListener('DOMContentLoaded', function () {
   const postInput = document.getElementById("post-input");
   const postButton = document.getElementById("post-button");
   const mediaPreview = document.getElementById("media-preview");
@@ -15,18 +79,171 @@ document.addEventListener("DOMContentLoaded", function () {
   const uploadProgress = document.getElementById("upload-progress");
   const uploadStatus = document.getElementById("upload-status");
 
+  // Initialize Firebase listeners only after DOM is ready
   firebase.auth().onAuthStateChanged(function (user) {
     if (user) {
       console.log("User is signed in:", user.uid);
       currentUser = user;
-      loadUserProfile(user);
-      loadPosts();
-      loadFriends();
+      initializeProfileElements(); // Initialize profile elements first
+      loadUserProfile(user);      // Load user profile data
+      loadPosts();               // Load posts after user is authenticated
+      loadNotifications();       // Load notifications after user is authenticated
     } else {
       console.log("No user is signed in");
-      window.location.href = "login.html";
+      window.location.href = '/login';
     }
   });
+
+  // Update loadNotifications function with null checks
+  function loadNotifications() {
+    if (!currentUser) return;
+
+    const notifBadge = document.querySelector('.ursac-notification-badge');
+    if (!notifBadge) return; // Add null check
+
+    const notifRef = firebase.database().ref('notifications');
+
+    notifRef.orderByChild('recipientId')
+      .equalTo(currentUser.uid)
+      .on('value', function (snapshot) {
+        let unreadCount = 0;
+
+        if (snapshot.exists()) {
+          snapshot.forEach(childSnapshot => {
+            const notification = childSnapshot.val();
+            if (notification.items) {
+              Object.values(notification.items).forEach(item => {
+                if (!item.read) unreadCount++;
+              });
+            }
+          });
+        }
+
+        // Update all notification badges with null check
+        document.querySelectorAll('.ursac-notification-badge').forEach(badge => {
+          if (badge) {
+            if (unreadCount > 0) {
+              badge.style.display = 'flex';
+              badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+        });
+      });
+  }
+
+  // Function to initialize profile elements
+  function initializeProfileElements() {
+    userProfileBtn = document.getElementById('user-profile-btn');
+    profileDropdown = document.getElementById('user-profile-dropdown');
+    logoutBtn = document.getElementById('logout-btn');
+    addAccountBtn = document.getElementById('add-account-btn');
+
+    // Toggle profile dropdown
+    if (userProfileBtn) {
+      userProfileBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (profileDropdown) {
+          const isVisible = profileDropdown.style.display === 'block';
+
+          // Toggle dropdown
+          profileDropdown.style.display = isVisible ? 'none' : 'block';
+
+          // Toggle chevron rotation
+          const chevron = this.querySelector('.fa-chevron-down');
+          if (chevron) {
+            chevron.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+            chevron.style.transition = 'transform 0.2s';
+          }
+
+          // Position the dropdown above the button
+          if (!isVisible) {
+            const buttonRect = userProfileBtn.getBoundingClientRect();
+            profileDropdown.style.bottom = `${buttonRect.height + 8}px`;
+          }
+        }
+      });
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function (e) {
+      if (profileDropdown &&
+        !profileDropdown.contains(e.target) &&
+        !userProfileBtn.contains(e.target)) {
+        profileDropdown.style.display = 'none';
+        const chevron = userProfileBtn.querySelector('.fa-chevron-down');
+        if (chevron) {
+          chevron.style.transform = 'rotate(0deg)';
+        }
+      }
+    });
+
+    // Setup logout button
+    if (logoutBtn) {
+      logoutBtn.innerHTML = `
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Log out</span>
+      `;
+      logoutBtn.addEventListener('click', function () {
+        firebase.auth().signOut().then(() => {
+          window.location.href = '/login';
+        }).catch((error) => {
+          console.error('Logout Error:', error);
+        });
+      });
+    }
+
+    // Setup add account button
+    if (addAccountBtn) {
+      addAccountBtn.innerHTML = `
+        <i class="fas fa-user-plus"></i>
+        <span>Add an existing account</span>
+      `;
+      addAccountBtn.addEventListener('click', function () {
+        firebase.auth().signOut().then(() => {
+          sessionStorage.setItem('addingAccount', 'true');
+          window.location.href = '/login';
+        });
+      });
+    }
+  }
+
+  // Add event listeners only if elements exist
+  const setupEventListeners = () => {
+    const userProfileBtn = document.getElementById('user-profile-btn');
+    const profileDropdown = document.getElementById('user-profile-dropdown');
+    const logoutBtn = document.getElementById('logout-btn');
+    const addAccountBtn = document.getElementById('add-account-btn');
+
+    if (userProfileBtn) {
+      userProfileBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (profileDropdown) {
+          profileDropdown.classList.toggle('show');
+        }
+      });
+    }
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', function () {
+        firebase.auth().signOut().then(() => {
+          window.location.href = '/login';
+        });
+      });
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function (e) {
+      if (profileDropdown && !profileDropdown.contains(e.target) &&
+        userProfileBtn && !userProfileBtn.contains(e.target)) {
+        profileDropdown.classList.remove('show');
+      }
+    });
+  };
+
+  // Call setup function after DOM is ready
+  setupEventListeners();
 
   setupEventListeners();
 
@@ -43,42 +260,147 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   }
-});
 
-function loadUserProfile(user) {
-  firebase
-    .database()
-    .ref("users/" + user.uid)
-    .once("value")
-    .then(function (snapshot) {
-      const userData = snapshot.val();
-      if (userData) {
-        const userProfileElement = document.getElementById("user-profile");
-        const createPostAvatar = document.getElementById("create-post-avatar");
-        const createPostUserName = document.getElementById("create-post-username");
-        const initials = getInitials(userData.firstName, userData.lastName);
-        const fullName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim();
-        userProfileElement.innerHTML = `
-          <div class="ursac-user-avatar">${initials}</div>
-          <div class="ursac-user-name">${userData.firstName || "User"}</div>
-        `;
-        createPostAvatar.innerHTML = `${initials}`;
-        if (createPostUserName) {
-          createPostUserName.textContent = fullName || "User";
-        }
-      }
-    })
-    .catch(function (error) {
-      console.error("Error loading user profile:", error);
+  // Modal elements
+  const postModal = document.getElementById('post-modal');
+  const openPostModalBtn = document.getElementById('open-post-modal');
+  const closePostModalBtn = document.getElementById('close-post-modal');
+  const modalPostContent = document.getElementById('modal-post-content');
+  const modalPostButton = document.getElementById('modal-post-button');
+  const modalMediaPreview = document.getElementById('modal-media-preview');
+  let modalSelectedMedia = null;
+
+  // Open modal
+  if (openPostModalBtn) {
+    openPostModalBtn.addEventListener('click', () => {
+      postModal.style.display = 'flex';
+      modalPostContent.value = '';
+      modalMediaPreview.innerHTML = '';
+      modalSelectedMedia = null;
+      modalPostButton.disabled = true;
     });
-}
+  }
 
-function getInitials(firstName, lastName) {
-  let initials = "";
-  if (firstName) initials += firstName.charAt(0).toUpperCase();
-  if (lastName) initials += lastName.charAt(0).toUpperCase();
-  return initials || "?";
-}
+  // Close modal
+  if (closePostModalBtn) {
+    closePostModalBtn.addEventListener('click', () => {
+      postModal.style.display = 'none';
+    });
+  }
+
+  // Enable/disable post button based on input/media
+  if (modalPostContent) {
+    modalPostContent.addEventListener('input', () => {
+      modalPostButton.disabled = modalPostContent.value.trim().length === 0 && !modalSelectedMedia;
+    });
+  }
+
+  // Media file handlers for modal
+  document.getElementById('modal-file-photo')?.addEventListener('change', function (e) {
+    handleModalFileSelect(e, 'image');
+  });
+  document.getElementById('modal-file-video')?.addEventListener('change', function (e) {
+    handleModalFileSelect(e, 'video');
+  });
+  document.getElementById('modal-file-attachment')?.addEventListener('change', function (e) {
+    handleModalFileSelect(e, 'file');
+  });
+
+  function handleModalFileSelect(event, type) {
+    const file = event.target.files[0];
+    if (!file) return;
+    modalMediaPreview.innerHTML = '';
+    modalSelectedMedia = { file, type, name: file.name, size: file.size };
+    const previewItem = document.createElement('div');
+    previewItem.className = 'ursac-preview-item';
+    if (type === 'image') {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      previewItem.appendChild(img);
+    } else if (type === 'video') {
+      const video = document.createElement('video');
+      video.src = URL.createObjectURL(file);
+      video.controls = true;
+      previewItem.appendChild(video);
+    } else {
+      previewItem.innerHTML = `<i class="fas fa-paperclip"></i><span>${file.name}</span>`;
+    }
+    modalMediaPreview.appendChild(previewItem);
+    modalPostButton.disabled = modalPostContent.value.trim().length === 0 && !modalSelectedMedia;
+  }
+
+  // Post creation logic for modal
+  if (modalPostButton) {
+    modalPostButton.addEventListener('click', function () {
+      if (!currentUser) {
+        alert("You must be logged in to post.");
+        return;
+      }
+      const content = modalPostContent.value.trim();
+      modalPostButton.disabled = true;
+
+      // If there is media, upload it first
+      if (modalSelectedMedia) {
+        uploadMedia(modalSelectedMedia.file, modalSelectedMedia.type)
+          .then((mediaData) => {
+            const newPostRef = firebase.database().ref("posts").push();
+            newPostRef
+              .set({
+                userId: currentUser.uid,
+                content: content,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                mediaURL: mediaData.url,
+                mediaType: mediaData.type,
+                mediaName: mediaData.name,
+                mediaSize: mediaData.size,
+              })
+              .then(() => {
+                console.log("Post with media created successfully.");
+              })
+              .catch((error) => {
+                console.error("Error creating post with media:", error);
+                alert("Failed to create post: " + error.message);
+              });
+          })
+          .catch((error) => {
+            console.error("Media upload failed:", error);
+            alert("Failed to upload media: " + error.message);
+          })
+          .finally(() => {
+            modalPostButton.disabled = false;
+          });
+      } else {
+        // No media, just create the post
+        const newPostRef = firebase.database().ref("posts").push();
+        newPostRef
+          .set({
+            userId: currentUser.uid,
+            content: content,
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+          })
+          .then(() => {
+            console.log("Post created successfully.");
+          })
+          .catch((error) => {
+            console.error("Error creating post:", error);
+            alert("Failed to create post: " + error.message);
+          })
+          .finally(() => {
+            modalPostButton.disabled = false;
+          });
+      }
+
+      postModal.style.display = 'none';
+      // Reset modal state
+      modalPostContent.value = '';
+      modalMediaPreview.innerHTML = '';
+      modalSelectedMedia = null;
+      modalPostButton.disabled = true;
+    });
+  }
+
+  initializeCommentListeners();
+});
 
 function loadPosts() {
   // Remove any existing listener to prevent duplicates
@@ -90,6 +412,7 @@ function loadPosts() {
   const postsRef = firebase.database().ref("posts");
   postsListener = postsRef
     .orderByChild("timestamp")
+    .limitToLast(50) // Limit to last 50 posts for performance
     .on(
       "value",
       function (snapshot) {
@@ -100,39 +423,35 @@ function loadPosts() {
         if (postsData) {
           // Convert to array and sort by timestamp in descending order (newest first)
           const postsArray = Object.entries(postsData)
-            .map(function ([id, post]) {
-              return {
-                id,
-                ...post,
-              };
-            })
-            .sort((a, b) => b.timestamp - a.timestamp); // Sort newest first
+            .map(([id, post]) => ({
+              id,
+              ...post,
+            }))
+            .sort((a, b) => b.timestamp - a.timestamp);
 
           const fragment = document.createDocumentFragment();
+          const loadedPosts = new Set(); // Track loaded posts to prevent duplicates
 
           // Process posts in order - newest first
-          const postPromises = postsArray.map(function (post) {
-            return new Promise(function (resolve) {
-              firebase
+          Promise.all(
+            postsArray.map((post) => {
+              if (loadedPosts.has(post.id)) return Promise.resolve(); // Skip if already loaded
+              loadedPosts.add(post.id);
+
+              return firebase
                 .database()
                 .ref("users/" + post.userId)
                 .once("value")
-                .then(function (userSnapshot) {
+                .then((userSnapshot) => {
                   const userData = userSnapshot.val();
                   const postElement = createPostElement(post, userData);
-
-                  // Add the post element to the top of the fragment (stack-like behavior)
-                  fragment.insertBefore(postElement, fragment.firstChild);
-                  resolve();
+                  fragment.appendChild(postElement);
                 })
-                .catch(function (error) {
+                .catch((error) => {
                   console.error("Error loading user data for post:", error);
-                  resolve();
                 });
-            });
-          });
-
-          Promise.all(postPromises).then(function () {
+            })
+          ).then(() => {
             // Clear the feed and add all posts
             postsFeed.innerHTML = "";
             postsFeed.appendChild(fragment);
@@ -169,29 +488,117 @@ function likePost(postId) {
     alert("You must be logged in to like a post.");
     return;
   }
+
   const postRef = firebase.database().ref(`posts/${postId}/likes/${currentUser.uid}`);
-  const postElement = document.querySelector(`[data-post-id="${postId}"]`);
-  const likeIcon = postElement.querySelector(".fa-thumbs-up");
-  const likeCountElement = postElement.querySelector(".ursac-post-stat span");
-  postRef.once("value").then(function (snapshot) {
-    if (snapshot.exists()) {
-      postRef.remove().then(() => {
-        console.log("Post unliked successfully.");
-        likeIcon.classList.remove("ursac-post-stat-active");
-        likeCountElement.textContent = parseInt(likeCountElement.textContent) - 1;
-      }).catch((error) => {
-        console.error("Error unliking post:", error);
-      });
-    } else {
-      postRef.set(true).then(() => {
-        console.log("Post liked successfully.");
-        likeIcon.classList.add("ursac-post-stat-active");
-        likeCountElement.textContent = parseInt(likeCountElement.textContent) + 1;
-      }).catch((error) => {
-        console.error("Error liking post:", error);
-      });
-    }
+  
+  // First, check if the post belongs to someone else (to avoid self-notifications)
+  firebase.database().ref(`posts/${postId}`).once("value").then(function(postSnapshot) {
+    const postData = postSnapshot.val();
+    if (!postData) return;
+    
+    // Don't notify if liking your own post
+    const shouldNotify = postData.userId !== currentUser.uid;
+    
+    postRef.once("value").then(function (snapshot) {
+      if (snapshot.exists()) {
+        // User is unliking the post
+        postRef.remove().then(() => {
+          console.log("Post unliked successfully.");
+        }).catch((error) => {
+          console.error("Error unliking post:", error);
+        });
+      } else {
+        // User is liking the post
+        postRef.set(true).then(() => {
+          console.log("Post liked successfully.");
+          
+          // Add notification if it's not the user's own post
+          if (shouldNotify) {
+            // Check if notifications node exists for this post
+            firebase.database().ref(`notifications/${postId}`).once("value").then(function(notifSnapshot) {
+              if (!notifSnapshot.exists()) {
+                // Create the notifications node first
+                firebase.database().ref(`notifications/${postId}`).set({
+                  postId: postId,
+                  recipientId: postData.userId
+                }).then(() => {
+                  // Now add the like notification
+                  firebase.database().ref(`notifications/${postId}/items`).push({
+                    type: "like",
+                    userId: currentUser.uid,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                    read: false  // Add this line to track read status
+                  });
+                });
+              } else {
+                // Notifications node already exists, just add the like
+                firebase.database().ref(`notifications/${postId}/items`).push({
+                  type: "like",
+                  userId: currentUser.uid,
+                  timestamp: firebase.database.ServerValue.TIMESTAMP,
+                  read: false  // Add this line to track read status
+                });
+              }
+            });
+          }
+        }).catch((error) => {
+          console.error("Error liking post:", error);
+        });
+      }
+    });
   });
+}
+
+// Update the existing commentPost function
+function commentPost(postId, commentText) {
+  if (!currentUser) {
+    alert("You must be logged in to comment on a post.");
+    return;
+  }
+
+  const commentRef = firebase.database().ref(`posts/${postId}/comments`).push();
+  
+  firebase.database().ref(`users/${currentUser.uid}`).once('value')
+    .then(function(userSnapshot) {
+      const userData = userSnapshot.val();
+      
+      return commentRef.set({
+        userId: currentUser.uid,
+        userFirstName: userData.firstName,
+        userLastName: userData.lastName,
+        text: commentText,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      });
+    })
+    .then(() => {
+      // Update comment count
+      const postCard = document.querySelector(`[data-post-id="${postId}"]`);
+      const commentCount = postCard.querySelector('.comment-count');
+      const currentCount = parseInt(commentCount.textContent) || 0;
+      commentCount.textContent = currentCount + 1;
+      
+      // Add notification for comment
+      const postRef = firebase.database().ref(`posts/${postId}`);
+      return postRef.once('value');
+    })
+    .then((postSnapshot) => {
+      const post = postSnapshot.val();
+      // Don't create notification if commenting on own post
+      if (post.userId !== currentUser.uid) {
+        return firebase.database().ref(`notifications/${postId}/items`).push({
+          type: 'comment',
+          userId: currentUser.uid,
+          postId: postId,
+          commentText: commentText,
+          timestamp: firebase.database.ServerValue.TIMESTAMP,
+          read: false
+        });
+      }
+    })
+    .catch((error) => {
+      console.error("Error adding comment:", error);
+      alert("Failed to add comment. Please try again.");
+    });
 }
 
 function sharePost(postId) {
@@ -394,7 +801,7 @@ function formatFileSize(bytes) {
   const k = 1024;
   const sizes = ["Bytes", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i).toFixed(2))) + " " + sizes[i];
 }
 
 function updatePostButton() {
@@ -406,90 +813,60 @@ function updatePostButton() {
 }
 
 function createPost() {
-  const postInput = document.getElementById("post-input");
-  const postButton = document.getElementById("post-button");
-  const expandedPostArea = document.getElementById("expanded-post-area");
-
   if (!currentUser) {
-    alert("You must be logged in to post");
+    alert("You must be logged in to post.");
     return;
   }
-
-  const content = postInput.value.trim();
-  if (!content && !selectedMedia) {
-    return;
-  }
-
-  // Disable the button to prevent multiple submissions
-  postButton.disabled = true;
-  postButton.textContent = "Posting...";
-
-  const finishPosting = function (mediaData = null) {
-    const postsRef = firebase.database().ref("posts").push();
-    const adminPostsRef = firebase.database().ref("admin_posts").child(postsRef.key);
-    // Create post data with current timestamp
-    const postData = {
-      userId: currentUser.uid,
-      content: content || "",
-      timestamp: firebase.database.ServerValue.TIMESTAMP,
-    };
-
-    if (mediaData) {
-      postData.mediaURL = mediaData.url;
-      postData.mediaType = mediaData.type;
-      postData.mediaName = mediaData.name;
-      postData.mediaSize = mediaData.size;
-      if (mediaData.imgBBId) {
-        postData.imgBBId = mediaData.imgBBId;
-      }
-      if (mediaData.deleteUrl) {
-        postData.mediaDeleteUrl = mediaData.deleteUrl;
-      }
-    }
-
-    postsRef
-      .set(postData)
-      .then(function () {
-        console.log("Post created successfully in posts with ID:", postsRef.key);
-        postInput.value = "";
-        clearMediaPreview();
-        postButton.disabled = false;
-        postButton.textContent = "Post";
-        if (expandedPostArea) {
-          expandedPostArea.classList.remove("ursac-expanded");
-        }
-        // Firebase listener will automatically update the feed with the new post
-      })
-      .catch(function (error) {
-        console.error("Error creating post:", error);
-        alert("Failed to create post: " + error.message);
-        postButton.disabled = false;
-        postButton.textContent = "Post";
-      });
-    
-    adminPostsRef.set(postData).then(function() {
-      console.log("Post created successfully in admin_posts with ID:", postsRef.key);
-    }).catch(function(error) {
-      console.error("Error creating post in admin_posts:", error);
-      // Consider how you want to handle this error, e.g., deleting the post from 'posts'
-    });
-
-  };
+  
+  const content = document.getElementById("post-input").value.trim();
 
   if (selectedMedia) {
     uploadMedia(selectedMedia.file, selectedMedia.type)
-      .then(function (mediaData) {
-        console.log("Media uploaded successfully:", mediaData);
-        finishPosting(mediaData);
+      .then((mediaData) => {
+        const newPostRef = firebase.database().ref("posts").push();
+        return newPostRef.set({
+          userId: currentUser.uid,
+          content: content,
+          timestamp: firebase.database.ServerValue.TIMESTAMP,
+          mediaURL: mediaData.url,
+          mediaType: mediaData.type,
+          mediaName: mediaData.name,
+          mediaSize: mediaData.size,
+        });
       })
-      .catch(function (error) {
-        console.error("Error uploading media:", error);
-        alert("Failed to upload media: " + error.message);
-        postButton.disabled = false;
-        postButton.textContent = "Post";
+      .then(() => {
+        console.log("Post created successfully");
+        clearPostForm();
+      })
+      .catch((error) => {
+        console.error("Error creating post:", error);
+        alert("Failed to create post: " + error.message);
       });
   } else {
-    finishPosting();
+    const newPostRef = firebase.database().ref("posts").push();
+    newPostRef.set({
+      userId: currentUser.uid,
+      content: content,
+      timestamp: firebase.database.ServerValue.TIMESTAMP,
+    })
+    .then(() => {
+      console.log("Post created successfully");
+      clearPostForm();
+    })
+    .catch((error) => {
+      console.error("Error creating post:", error);
+      alert("Failed to create post: " + error.message);
+    });
+  }
+}
+
+function clearPostForm() {
+  document.getElementById("post-input").value = "";
+  clearMediaPreview();
+  updatePostButton();
+  const expandedPostArea = document.getElementById("expanded-post-area");
+  if (expandedPostArea) {
+    expandedPostArea.classList.remove("ursac-expanded");
   }
 }
 
@@ -682,9 +1059,16 @@ function createPostElement(post, userData) {
         <i class="fas fa-share"></i>
         <span>Share</span>
       </div>
-      <div class="ursac-post-stat">
+      <div class="ursac-post-stat" onclick="toggleComments(this)">
         <i class="fas fa-comment"></i>
         <span>${countComments(post.comments)}</span>
+      </div>
+    </div>
+    <div class="ursac-post-comments" style="display: none;">
+      <div class="ursac-comments-list"></div>
+      <div class="ursac-comment-input-area">
+        <input type="text" class="ursac-comment-input" placeholder="Write a comment...">
+        <button class="ursac-comment-submit" disabled>Post</button>
       </div>
     </div>
   `;
@@ -692,6 +1076,132 @@ function createPostElement(post, userData) {
   return postElement;
 }
 
+// Update the toggleComments function
+function toggleComments(element) {
+  if (!element) return;
+
+  const postCard = element.closest('.ursac-post-card');
+  if (!postCard) return;
+
+  const commentSection = postCard.querySelector('.ursac-post-comments');
+  if (!commentSection) return;
+
+  const isVisible = commentSection.style.display === 'block';
+  commentSection.style.display = isVisible ? 'none' : 'block';
+
+  if (!isVisible) {
+    const postId = postCard.dataset.postId;
+    if (postId) {
+      loadComments(postId);
+    }
+
+    const input = commentSection.querySelector('.ursac-comment-input');
+    if (input) {
+      // Remove any existing event listeners first
+      input.removeEventListener('keypress', handleCommentKeyPress);
+      input.removeEventListener('input', handleCommentInput);
+
+      // Add event listeners
+      input.addEventListener('keypress', handleCommentKeyPress);
+      input.addEventListener('input', handleCommentInput);
+      input.focus();
+    }
+  }
+}
+
+// Update the handleCommentKeyPress function
+function handleCommentKeyPress(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    const commentText = e.target.value.trim();
+    if (commentText) {
+      const postCard = e.target.closest('.ursac-post-card');
+      if (postCard) {
+        const postId = postCard.dataset.postId;
+        if (postId) {
+          commentPost(postId, commentText);
+          // Clear input and disable button after successful comment
+          e.target.value = '';
+          const submitBtn = e.target.nextElementSibling;
+          if (submitBtn) {
+            submitBtn.disabled = true;
+          }
+        }
+      }
+    }
+  }
+}
+
+function loadComments(postId) {
+  if (!currentUser) return;
+
+  const commentsRef = firebase.database().ref(`posts/${postId}/comments`);
+  commentsRef.on('value', function(snapshot) {
+    const commentsList = document.querySelector(`[data-post-id="${postId}"] .ursac-comments-list`);
+    
+    if (!snapshot.exists()) {
+      commentsList.innerHTML = `
+        <div class="ursac-no-comments">
+          No comments yet. Be the first to comment!
+        </div>
+      `;
+      return;
+    }
+
+    const comments = [];
+    snapshot.forEach((childSnapshot) => {
+      const comment = childSnapshot.val();
+      comments.push({
+        id: childSnapshot.key,
+        ...comment
+      });
+    });
+
+    // Sort comments by timestamp (newest first)
+    comments.sort((a, b) => b.timestamp - a.timestamp);
+
+    commentsList.innerHTML = comments.map(comment => createCommentElement(comment)).join('');
+  });
+}
+
+function createCommentElement(comment) {
+  return `
+    <div class="ursac-comment" data-comment-id="${comment.id}">
+      <div class="ursac-comment-avatar">
+        ${getInitials(comment.userFirstName, comment.userLastName)}
+      </div>
+      <div class="ursac-comment-content">
+        <div class="ursac-comment-header">
+          <span class="ursac-comment-username">${comment.userFirstName} ${comment.userLastName}</span>
+          <span class="ursac-comment-time">${formatTimestamp(comment.timestamp)}</span>
+        </div>
+        <div class="ursac-comment-text">${comment.text}</div>
+      </div>
+    </div>
+  `;
+}
+
+// Add this initialization function
+function initializeCommentListeners() {
+  document.querySelectorAll('.ursac-comment-input').forEach(input => {
+    if (input) {
+      input.removeEventListener('keypress', handleCommentKeyPress);
+      input.removeEventListener('input', handleCommentInput);
+      input.addEventListener('keypress', handleCommentKeyPress);
+      input.addEventListener('input', handleCommentInput);
+    }
+  });
+}
+
+function formatTimestamp(timestamp) {
+  const date = new Date(timestamp);
+  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 window.clearMediaPreview = clearMediaPreview;
 window.likePost = likePost;
 window.sharePost = sharePost;
+window.loadUserProfile = loadUserProfile;
+window.loadNotifications = loadNotifications;
+window.toggleComments = toggleComments;
+window.commentPost = commentPost;

@@ -89,44 +89,56 @@
     
     async function authenticateUser(emailOrStudentId, password) {
       try {
+        let userCredential, user, userData;
+
         if (isEmail(emailOrStudentId)) {
-          const userCredential = await firebase.auth().signInWithEmailAndPassword(emailOrStudentId, password);
-          const user = userCredential.user;
-          
+          // Sign in with email/password
+          userCredential = await firebase.auth().signInWithEmailAndPassword(emailOrStudentId, password);
+          user = userCredential.user;
+
+          // Check if user exists in Realtime Database
           const snapshot = await firebase.database().ref('users/' + user.uid).once('value');
-          const userData = snapshot.val();
-          
-          if (userData && userData.role === 'admin') {
-            window.location.href = '/admin';
-          } else {
-            window.location.href = '/homepage';
+          userData = snapshot.val();
+
+          if (!userData) {
+            // User does not exist in database, sign out and block login
+            await firebase.auth().signOut();
+            return { success: false, error: "Your account has been removed. Please register first." };
           }
 
-          return { success: true, user, userData }; 
-
-
+          return { success: true, user, userData };
         } else {
+          // Lookup by student ID
           const snapshot = await firebase.database()
             .ref('users')
             .orderByChild('studentId')
             .equalTo(emailOrStudentId)
             .once('value');
-          
           const data = snapshot.val();
-          
+
           if (!data) {
             return { success: false, error: "No user found with this Student ID" };
           }
-          
+
           const userId = Object.keys(data)[0];
-          const userData = data[userId];
-          
+          userData = data[userId];
+
           if (!userData.email) {
             return { success: false, error: "User email not found" };
           }
-          
-          const userCredential = await firebase.auth().signInWithEmailAndPassword(userData.email, password);
-          return { success: true, user: userCredential.user, userData };
+
+          // Sign in with email/password
+          userCredential = await firebase.auth().signInWithEmailAndPassword(userData.email, password);
+          user = userCredential.user;
+
+          // Double-check user still exists in DB
+          const dbCheck = await firebase.database().ref('users/' + user.uid).once('value');
+          if (!dbCheck.exists()) {
+            await firebase.auth().signOut();
+            return { success: false, error: "Your account has been removed. Please register first." };
+          }
+
+          return { success: true, user, userData };
         }
       } catch (error) {
         return { success: false, error: error.message };
@@ -171,6 +183,25 @@
             ...result.userData
           }));
         }
+        firebase.auth().currentUser.getIdToken(/* forceRefresh */ true).then(function(idToken) {
+  fetch('/firebase-session', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({ idToken: idToken })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Now backend session is set, you can redirect
+      window.location.href = '/homepage';
+    } else {
+      alert('Session sync failed: ' + data.error);
+    }
+  });
+});
         
         alert('Login successful! Welcome, ' + (result.userData.firstName || 'User'));
         if (result.userData && result.userData.role === 'admin') {
@@ -194,44 +225,60 @@
         .then((result) => {
           const user = result.user;
           console.log('Google sign-in successful', user);
-          
+
+          // Check if the user's email exists in the users node of the database
           firebase.database().ref('users')
             .orderByChild('email')
             .equalTo(user.email)
             .once('value')
             .then((snapshot) => {
               if (snapshot.exists()) {
+                // User is registered in the database
                 const userData = Object.values(snapshot.val())[0];
-                
+
+                // Proceed with login
                 localStorage.setItem('user', JSON.stringify({
                   uid: user.uid,
                   email: user.email,
                   ...userData
                 }));
-                
-                alert('Google login successful! Welcome, ' + (userData.firstName || user.displayName || 'User'));                
+                firebase.auth().currentUser.getIdToken(/* forceRefresh */ true).then(function(idToken) {
+  fetch('/firebase-session', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({ idToken: idToken })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Now backend session is set, you can redirect
+      window.location.href = '/homepage';
+    } else {
+      alert('Session sync failed: ' + data.error);
+    }
+  });
+});
+
+                alert('Google login successful! Welcome, ' + (userData.firstName || user.displayName || 'User'));
                 if (userData && userData.role === 'admin') {
                   window.location.href = '/admin';
                 } else {
                   window.location.href = '/homepage';
                 }
-
               } else {
-                firebase.database().ref('users/' + user.uid).set({
-                  firstName: user.displayName ? user.displayName.split(' ')[0] : '',
-                  lastName: user.displayName ? user.displayName.split(' ').slice(1).join(' ') : '',
-                  email: user.email,
-                  createdAt: firebase.database.ServerValue.TIMESTAMP,
-                  provider: 'google'
-                })
-                .then(() => {
-                  alert('Google account registered successfully! Welcome!');
-                })
-                .catch((error) => {
-                  console.error('Error creating user:', error);
-                  alert('Failed to create user: ' + error.message);
-                });
+                // User not registered in database
+                alert('Your Google account is not registered. Please register first.');
+                firebase.auth().signOut();
+                window.location.href = '/register';
               }
+            })
+            .catch((error) => {
+              console.error('Database error:', error);
+              alert('An error occurred while checking registration: ' + error.message);
+              firebase.auth().signOut();
             });
         })
         .catch((error) => {

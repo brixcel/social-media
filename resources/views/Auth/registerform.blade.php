@@ -5,15 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Register Page</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/main.css" />
   <!-- Firebase App (the core Firebase SDK) -->
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
-  <!-- Firebase Authentication -->
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js"></script>
-  <!-- Firebase Realtime Database -->
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-database.js"></script>
-  <!-- Initialize Firebase -->
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <script>
-    // Your web app's Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyAZ6EzZLpBIUlTjFm7ZUBfMMkmslIOeMFg",
       authDomain: "social-media-8c5ba.firebaseapp.com",
@@ -24,216 +22,166 @@
       appId: "1:25174929156:web:edd2093c4b96f710262a51",
       measurementId: "G-SMRP4X0HPM"
     };
-    
-    // Initialize Firebase with Firebase v8 syntax
     firebase.initializeApp(firebaseConfig);
-    console.log("Firebase initialized successfully");
   </script>
-  <link rel="stylesheet" href="main.css" />
 </head>
 <body>
-  <div class="container">
-    <div class="logo">URSAC Hub</div>
-    <div class="form-card">
-      <h2>Register now!</h2>
-      
-      <!-- Step 1: First Name, Last Name, Middle Name, Student ID -->
+  <div class="ursac-auth-bg">
+    <div class="ursac-auth-logo">URSAC Hub</div>
+    <div class="ursac-auth-card">
+      <h2 class="ursac-auth-title">Register now!</h2>
+      <!-- Step 1: Name and Email -->
       <form id="step1-form" class="form-step active">
         <label for="first-name">First Name</label>
         <input type="text" required id="first-name" />
-        
         <label for="last-name">Last Name</label>
         <input type="text" required id="last-name" />
-        
         <label for="middle-name">Middle Name</label>
         <input type="text" id="middle-name" />
-        
-        <label for="student-id">Student-ID</label>
-        <input type="text" required id="student-id" />
-        
-        <button type="button" id="next-btn" class="submit-btn">→</button>
-      </form>
-      
-      <!-- Step 2: Email, Password, Confirm Password -->
-      <form id="step2-form" class="form-step">
         <label for="email">Email</label>
         <input type="email" required id="email" />
-        
+        <button type="button" id="next-btn" class="submit-btn">→</button>
+      </form>
+      <!-- Step 2: Student ID, Program, Password -->
+      <form id="step2-form" class="form-step">
+        <label for="student-id">Student-ID</label>
+        <input type="text" required id="student-id" />
+        <label for="program">Program</label>
+        <input type="text" required id="program" />
         <label for="password">Password</label>
         <input type="password" required id="password" minlength="6" />
-        
         <label for="confirm-password">Confirm Password</label>
         <input type="password" required id="confirm-password" minlength="6" />
-        
-        <label for="role">Role</label>
-        <select id="role">
-          <option value="user">User</option>
-          <option value="admin">Admin</option>
-        </select>
-
-        
         <button type="button" id="submit-btn" class="submit-btn">→</button>
       </form>
-      
+      <!-- Step 3: Email Verification Notice -->
+      <div id="step3-verification" class="form-step">
+        <div class="ursac-verification-title">
+          Please verify your email address
+        </div>
+        <div>
+          We've sent a verification link to:<br>
+          <span id="verify-email" class="ursac-verification-email"></span>
+        </div>
+        <div style="margin: 18px 0;">
+          <span>Didn't receive an email?</span>
+          <a href="#" id="resend-link" class="ursac-resend-link">Resend Verification Email</a>
+        </div>
+        <div>
+          <strong>After verifying, you can <a href="{{ url('login') }}">login here</a>.</strong>
+        </div>
+      </div>
       <p class="signin-text">
         Already have an account?<br>
         <a href="{{ url('login') }}" id="signin-link">SIGN-IN NOW!</a>
       </p>
     </div>
   </div>
-  
   <script>
-    // Get form elements
+    // Step navigation
     const step1Form = document.getElementById('step1-form');
     const step2Form = document.getElementById('step2-form');
+    const step3Verification = document.getElementById('step3-verification');
     const nextBtn = document.getElementById('next-btn');
     const submitBtn = document.getElementById('submit-btn');
-    
-    // Store form data
+    const resendLinkBtn = document.getElementById('resend-link');
+    const verifyEmailSpan = document.getElementById('verify-email');
+
     let formData = {};
-    
-    // Debug click events
-    console.log("Script loaded");
-    
-    // Add click event listener to next button
+    let currentUser = null;
+
+    // Step 1: Next
     nextBtn.addEventListener('click', function() {
-      console.log("Next button clicked");
-      
-      // Validate step 1 inputs
-      const firstName = document.getElementById('first-name');
-      const lastName = document.getElementById('last-name');
-      const studentId = document.getElementById('student-id');
-      
-      if (!firstName.checkValidity()) {
-        firstName.reportValidity();
-        return;
-      }
-      
-      if (!lastName.checkValidity()) {
-        lastName.reportValidity();
-        return;
-      }
-      
-      if (!studentId.checkValidity()) {
-        studentId.reportValidity();
-        return;
-      }
-      
-      // Store step 1 data
-      formData.firstName = firstName.value;
-      formData.lastName = lastName.value;
+      if (!step1Form.reportValidity()) return;
+      formData.firstName = document.getElementById('first-name').value;
+      formData.lastName = document.getElementById('last-name').value;
       formData.middleName = document.getElementById('middle-name').value;
-      formData.studentId = studentId.value;
-      
-      // Move to step 2
+      formData.email = document.getElementById('email').value;
       step1Form.classList.remove('active');
       step2Form.classList.add('active');
     });
-    
-    // Add click event listener to submit button
+
+    // Step 2: Submit and send verification email
     submitBtn.addEventListener('click', function() {
-      console.log("Submit button clicked");
-      
-      // Validate step 2 inputs
-      const email = document.getElementById('email');
-      const password = document.getElementById('password');
-      const confirmPassword = document.getElementById('confirm-password');
-      
-      if (!email.checkValidity()) {
-        email.reportValidity();
-        return;
-      }
-      
-      if (!password.checkValidity()) {
-        password.reportValidity();
-        return;
-      }
-      
-      if (!confirmPassword.checkValidity()) {
-        confirmPassword.reportValidity();
-        return;
-      }
-      
-      // Check if passwords match
-      if (password.value !== confirmPassword.value) {
+      if (!step2Form.reportValidity()) return;
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+      if (password !== confirmPassword) {
         alert('Passwords do not match!');
         return;
       }
-      
-      // Disable button to prevent multiple submissions
-      submitBtn.disabled = true;
-      submitBtn.textContent = "...";
-      
-      // Get step 2 values
-      const emailValue = email.value;
-      const passwordValue = password.value;
-      
-      console.log("Creating user with:", emailValue, passwordValue);
-      
-      try {
-        // Create user with email and password
-        firebase.auth().createUserWithEmailAndPassword(emailValue, passwordValue)
-          .then((userCredential) => {
-            console.log("User created successfully");
-            // Get user ID from the authentication
-            const userId = userCredential.user.uid;
-            
-            // Save additional user data to the database
-            return firebase.database().ref('users/' + userId).set({
-              firstName: formData.firstName,
-              lastName: formData.lastName,
-              middleName: formData.middleName,
-              studentId: formData.studentId,
-              role: document.getElementById('role').value, // Save the selected role
-              email: emailValue,
-              createdAt: firebase.database.ServerValue.TIMESTAMP
+      formData.studentId = document.getElementById('student-id').value;
+      formData.program = document.getElementById('program').value;
+      formData.password = password;
+
+      // Check if student ID is already used
+      firebase.database().ref('users')
+        .orderByChild('studentId')
+        .equalTo(formData.studentId)
+        .once('value')
+        .then(function(snapshot) {
+          if (snapshot.exists()) {
+            alert('This Student ID is already registered. Please use another one.');
+            return;
+          }
+
+          // Proceed with registration if student ID is unique
+          firebase.auth().createUserWithEmailAndPassword(formData.email, formData.password)
+            .then((userCredential) => {
+              currentUser = userCredential.user;
+              // Save additional user data to database
+              return firebase.database().ref('users/' + currentUser.uid).set({
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                middleName: formData.middleName,
+                studentId: formData.studentId,
+                program: formData.program,
+                email: formData.email,
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+              });
+            })
+            .then(() => {
+              // Send verification email
+              return currentUser.sendEmailVerification();
+            })
+            .then(() => {
+              // Sync backend session for protected routes
+              return currentUser.getIdToken(/* forceRefresh */ true).then(function(idToken) {
+                return fetch('/firebase-session', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                  },
+                  body: JSON.stringify({ idToken: idToken })
+                });
+              });
+            })
+            .then(() => {
+              verifyEmailSpan.textContent = formData.email;
+              step2Form.classList.remove('active');
+              step3Verification.classList.add('active');
+              alert('Verification email sent! Please check your inbox and verify your email address.');
+            })
+            .catch((error) => {
+              alert('Registration failed: ' + error.message);
             });
-          })
+        });
+    });
+
+    // Resend verification email
+    resendLinkBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (currentUser) {
+        currentUser.sendEmailVerification()
           .then(() => {
-            console.log("User data saved to database");
-            alert('Registration successful! You can now login with your email and password.');
-            
-            // Reset forms
-            step1Form.reset();
-            step2Form.reset();
-            
-            // Reset to step 1
-            step2Form.classList.remove('active');
-            step1Form.classList.add('active');
-            
-            // Re-enable button
-            submitBtn.disabled = false;
-            submitBtn.textContent = "→";
+            alert('Verification email resent! Please check your inbox.');
           })
           .catch((error) => {
-            console.error("Error during registration:", error);
-            alert('Registration failed: ' + error.message);
-            
-            // Re-enable button
-            submitBtn.disabled = false;
-            submitBtn.textContent = "→";
+            alert('Failed to resend verification email: ' + error.message);
           });
-      } catch (e) {
-        console.error("Exception caught:", e);
-        alert('An error occurred: ' + e.message);
-        
-        // Re-enable button
-        submitBtn.disabled = false;
-        submitBtn.textContent = "→";
-      }
-    });
-    
-    // Add console logs to debug
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log("DOM fully loaded");
-      console.log("Next button:", nextBtn);
-      console.log("Submit button:", submitBtn);
-      
-      // Verify Firebase is properly initialized
-      if (firebase.apps.length > 0) {
-        console.log("Firebase is initialized correctly");
       } else {
-        console.error("Firebase initialization failed");
+        alert('No user found to resend verification email.');
       }
     });
   </script>

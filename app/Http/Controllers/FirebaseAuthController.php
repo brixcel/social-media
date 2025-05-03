@@ -100,7 +100,16 @@ protected function saveUserData($uid, $data)
     $usersRef->getChild($uid)->set($data);
 }
 
-
+public function notifications()
+{
+    // Just return the notifications Blade view.
+    return view('Auth.notifications');
+}
+public function messages()
+{
+    // Just return the messages Blade view.
+    return view('Auth.messages'); // Corrected the view name here
+}
 
 
     public function login(Request $request)
@@ -160,5 +169,7 @@ protected function saveUserData($uid, $data)
             return null;
         }
     }
-}
 
+
+
+}
