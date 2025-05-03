@@ -11,6 +11,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-database.js"></script>
   <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="app-url" content="{{ url('/') }}">
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyAZ6EzZLpBIUlTjFm7ZUBfMMkmslIOeMFg",
@@ -102,86 +103,109 @@
     });
 
     // Step 2: Submit and send verification email
-    submitBtn.addEventListener('click', function() {
-      if (!step2Form.reportValidity()) return;
-      const password = document.getElementById('password').value;
-      const confirmPassword = document.getElementById('confirm-password').value;
-      if (password !== confirmPassword) {
-        alert('Passwords do not match!');
-        return;
-      }
-      formData.studentId = document.getElementById('student-id').value;
-      formData.program = document.getElementById('program').value;
-      formData.password = password;
+    submitBtn.addEventListener('click', async function() {
+      try {
+        if (!step2Form.reportValidity()) return;
+        
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
+        
+        if (password !== confirmPassword) {
+          alert('Passwords do not match!');
+          return;
+        }
+        
+        // Disable submit button to prevent double submission
+        submitBtn.disabled = true;
+        
+        formData.studentId = document.getElementById('student-id').value;
+        formData.program = document.getElementById('program').value;
+        formData.password = password;
 
-      // Check if student ID is already used
-      firebase.database().ref('users')
-        .orderByChild('studentId')
-        .equalTo(formData.studentId)
-        .once('value')
-        .then(function(snapshot) {
-          if (snapshot.exists()) {
-            alert('This Student ID is already registered. Please use another one.');
-            return;
-          }
+        // Check student ID first
+        const idSnapshot = await firebase.database().ref('users')
+          .orderByChild('studentId')
+          .equalTo(formData.studentId)
+          .once('value');
 
-          // Proceed with registration if student ID is unique
-          firebase.auth().createUserWithEmailAndPassword(formData.email, formData.password)
-            .then((userCredential) => {
-              currentUser = userCredential.user;
-              // Save additional user data to database
-              return firebase.database().ref('users/' + currentUser.uid).set({
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                middleName: formData.middleName,
-                studentId: formData.studentId,
-                program: formData.program,
-                email: formData.email,
-                createdAt: firebase.database.ServerValue.TIMESTAMP
-              });
-            })
-            .then(() => {
-              // Send verification email
-              return currentUser.sendEmailVerification();
-            })
-            .then(() => {
-              // Sync backend session for protected routes
-              return currentUser.getIdToken(/* forceRefresh */ true).then(function(idToken) {
-                return fetch('/firebase-session', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                  },
-                  body: JSON.stringify({ idToken: idToken })
-                });
-              });
-            })
-            .then(() => {
-              verifyEmailSpan.textContent = formData.email;
-              step2Form.classList.remove('active');
-              step3Verification.classList.add('active');
-              alert('Verification email sent! Please check your inbox and verify your email address.');
-            })
-            .catch((error) => {
-              alert('Registration failed: ' + error.message);
-            });
+        if (idSnapshot.exists()) {
+          alert('This Student ID is already registered. Please use another one.');
+          submitBtn.disabled = false;
+          return;
+        }
+
+        // Create user account
+        const userCredential = await firebase.auth().createUserWithEmailAndPassword(
+          formData.email, 
+          formData.password
+        );
+        
+        currentUser = userCredential.user;
+
+        // Wait for user to be fully created before continuing
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Save user data to database
+        await firebase.database().ref('users/' + currentUser.uid).set({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          middleName: formData.middleName,
+          studentId: formData.studentId,
+          program: formData.program,
+          email: formData.email,
+          emailVerified: false,
+          createdAt: firebase.database.ServerValue.TIMESTAMP
         });
+
+        // Send verification email
+        await currentUser.sendEmailVerification({
+          url: window.location.origin + '/login' // Add redirect URL
+        });
+
+        // Get fresh token and sync session
+        const idToken = await currentUser.getIdToken(true);
+        
+        await fetch('/firebase-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({ idToken: idToken })
+        });
+
+        // Show verification screen
+        verifyEmailSpan.textContent = formData.email;
+        step2Form.classList.remove('active');
+        step3Verification.classList.add('active');
+        
+        alert('Verification email sent! Please check your inbox and verify your email address.');
+
+      } catch (error) {
+        console.error('Registration error:', error);
+        alert('Registration failed: ' + error.message);
+        submitBtn.disabled = false;
+      }
     });
 
     // Resend verification email
-    resendLinkBtn.addEventListener('click', function(e) {
+    resendLinkBtn.addEventListener('click', async function(e) {
       e.preventDefault();
-      if (currentUser) {
-        currentUser.sendEmailVerification()
-          .then(() => {
-            alert('Verification email resent! Please check your inbox.');
-          })
-          .catch((error) => {
-            alert('Failed to resend verification email: ' + error.message);
-          });
-      } else {
-        alert('No user found to resend verification email.');
+      
+      try {
+        const user = firebase.auth().currentUser;
+        if (!user) {
+          throw new Error('No user found to resend verification email.');
+        }
+
+        await user.sendEmailVerification({
+          url: window.location.origin + '/login'
+        });
+        
+        alert('Verification email resent! Please check your inbox.');
+      } catch (error) {
+        console.error('Resend verification error:', error);
+        alert('Failed to resend verification email: ' + error.message);
       }
     });
   </script>
