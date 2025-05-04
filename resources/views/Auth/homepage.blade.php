@@ -24,7 +24,7 @@
         </a>
         <a href="{{ route('notifications') }}" class="ursac-menu-item">
           <i class="fas fa-bell ursac-notification-indicator">
-            <span class="ursac-notification-badge"></span>
+            <span class="ursac-notification-badge" style="display: none;">0</span>
           </i>
           <span>Notifications</span>
         </a>
@@ -134,7 +134,7 @@
           
           <div class="ursac-post-footer">
             <div class="ursac-post-stat" onclick="likePost('${postId}')">
-              <i class="far fa-heart"></i>
+              <i class="far fa-thumbs-up"></i>
               <span class="like-count">0</span>
             </div>
             <div class="ursac-post-stat" onclick="toggleComments(this)">

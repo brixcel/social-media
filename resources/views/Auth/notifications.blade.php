@@ -21,9 +21,9 @@
           <i class="fas fa-home"></i>
           <span>Home</span>
         </a>
-        <a href="{{ route('notifications') }}" class="ursac-menu-item">
+        <a href="{{ route('notifications') }}" class="ursac-menu-item ursac-menu-active">
           <i class="fas fa-bell ursac-notification-indicator">
-            <span class="ursac-notification-badge"></span>
+            <span class="ursac-notification-badge" style="display: none;"></span>
           </i>
           <span>Notifications</span>
         </a>
@@ -93,12 +93,38 @@
       
       <!-- Notifications Feed -->
       <div class="ursac-notifications-feed" id="notifications-feed">
+        <!-- Loading state -->
+        <div class="ursac-notifications-loading">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>Loading notifications...</p>
+        </div>
+        
         <!-- Empty state message that will be shown when there are no notifications -->
         <div class="ursac-notifications-empty" style="display: none;">
           <i class="fas fa-bell-slash"></i>
           <p>No notifications yet</p>
         </div>
-        <!-- Notifications will be dynamically loaded here by notifications.js -->
+        
+        <!-- Notification item template (will be populated dynamically) -->
+        <div class="ursac-notification-item-template" style="display: none;">
+          <div class="ursac-notification-icon">
+            <!-- Icon will be inserted here -->
+          </div>
+          <div class="ursac-notification-content">
+            <div class="ursac-notification-text">
+              <!-- Notification text will be inserted here -->
+            </div>
+            <div class="ursac-notification-meta">
+              <span class="ursac-notification-time">
+                <!-- Time will be inserted here -->
+              </span>
+            </div>
+          </div>
+          <div class="ursac-notification-actions">
+            <button class="ursac-view-button">View</button>
+            <button class="ursac-mark-read-button">Mark as read</button>
+          </div>
+        </div>
       </div>
     </div>
     
