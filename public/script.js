@@ -66,16 +66,16 @@ function loadNotifications() {
 // Move loadUserProfile function here, outside DOMContentLoaded
 function loadUserProfile(user) {
   if (!user) {
-    console.log("No user provided to loadUserProfile");
+    
     return;
   }
 
-  console.log("Loading profile for user:", user.uid);
+ 
   
   firebase.database().ref("users/" + user.uid).once("value")
     .then(function(snapshot) {
       const userData = snapshot.val();
-      console.log("User data:", userData);
+     
       
       // Use the global userProfileBtn instead of creating a new local variable
       if (userData && userProfileBtn) {
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // Initialize Firebase listeners only after DOM is ready
   firebase.auth().onAuthStateChanged(function (user) {
     if (user) {
-      console.log("User is signed in:", user.uid);
+     
       currentUser = user;
       initializeProfileElements(); // Initialize profile elements first
       loadUserProfile(user);      // Load user profile data
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function () {
       // Set up a periodic refresh of notifications
       setInterval(loadNotifications, 30000); // Refresh every 30 seconds
     } else {
-      console.log("No user is signed in");
+    
       window.location.href = '/login';
     }
   });
@@ -655,13 +655,6 @@ function loadPostsAlternative() {
     );
 }
 
-// The code already implements a stack-like structure for posts with newest at the top
-console.log("The code already implements a stack-like structure for posts with newest at the top.");
-console.log("The key changes to ensure this works correctly are:");
-console.log("1. Using orderByChild('timestamp') in the Firebase query");
-console.log("2. Sorting the posts array with newest first: sort((a, b) => b.timestamp - a.timestamp)");
-console.log("3. Using Server.TIMESTAMP to ensure accurate timestamps");
-console.log("4. Using limitToLast() to get the most recent posts first");
 
 function countLikes(likes) {
   if (!likes) return 0;
@@ -2387,10 +2380,3 @@ document.addEventListener('DOMContentLoaded', function() {
   // Wait for posts to load, then highlight new ones
   setTimeout(highlightNewPosts, 2000);
 });
-
-console.log("Fixed the loadPosts function to ensure newest posts appear at the top");
-console.log("The key changes are:");
-console.log("1. Using fragment.insertBefore(postElement, fragment.firstChild) to add newest posts at the top");
-console.log("2. Forcing a refresh of posts after creating a new post");
-console.log("3. Added debugging functions to verify post timestamps");
-console.log("4. Added visual highlighting for new posts");

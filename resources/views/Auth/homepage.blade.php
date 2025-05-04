@@ -148,6 +148,7 @@
 
           <!-- Add comment section -->
           <div class="ursac-post-comments" style="display: none;">
+            <!-- This div will be populated with the post owner's name -->
             <div class="ursac-comment-input-wrapper">
               <div class="ursac-comment-avatar">
                 <!-- User initials will be added dynamically -->
