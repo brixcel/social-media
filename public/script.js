@@ -66,22 +66,18 @@ function loadNotifications() {
 // Move loadUserProfile function here, outside DOMContentLoaded
 function loadUserProfile(user) {
   if (!user) {
-    
     return;
   }
 
- 
-  
   firebase.database().ref("users/" + user.uid).once("value")
     .then(function(snapshot) {
       const userData = snapshot.val();
-     
-      
+
       // Use the global userProfileBtn instead of creating a new local variable
       if (userData && userProfileBtn) {
         const initials = getInitials(userData.firstName, userData.lastName);
         const fullName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim();
-        
+
         // Update profile button
         userProfileBtn.innerHTML = `
           <div class="ursac-profile-avatar">
@@ -97,7 +93,7 @@ function loadUserProfile(user) {
         // Update create post area
         const createPostAvatar = document.getElementById("create-post-avatar");
         const createPostUsername = document.getElementById("create-post-username");
-        
+
         if (createPostAvatar) {
           createPostAvatar.innerHTML = `<span>${initials}</span>`;
         }
@@ -128,17 +124,15 @@ document.addEventListener('DOMContentLoaded', function () {
   // Initialize Firebase listeners only after DOM is ready
   firebase.auth().onAuthStateChanged(function (user) {
     if (user) {
-     
       currentUser = user;
       initializeProfileElements(); // Initialize profile elements first
       loadUserProfile(user);      // Load user profile data
       loadPosts();               // Load posts after user is authenticated
       loadNotifications();       // Load notifications after user is authenticated
-      
+
       // Set up a periodic refresh of notifications
       setInterval(loadNotifications, 30000); // Refresh every 30 seconds
     } else {
-    
       window.location.href = '/login';
     }
   });
@@ -428,12 +422,12 @@ function loadPosts() {
       function (snapshot) {
         const postsData = snapshot.val();
         const postsFeed = document.getElementById("posts-feed");
-        
+
         if (!postsFeed) {
           console.error("Posts feed element not found");
           return;
         }
-        
+
         postsFeed.innerHTML = "";
 
         if (postsData) {
@@ -445,12 +439,12 @@ function loadPosts() {
             }))
             .sort((a, b) => b.timestamp - a.timestamp); // Ensure newest posts are first
 
-          console.log("Posts sorted by timestamp (newest first):", 
+          console.log("Posts sorted by timestamp (newest first):",
             postsArray.map(p => ({ id: p.id, timestamp: p.timestamp })));
 
           // Create a new fragment to hold all posts
           const fragment = document.createDocumentFragment();
-          
+
           // Process posts in order - newest first
           Promise.all(
             postsArray.map((post) => {
@@ -461,7 +455,7 @@ function loadPosts() {
                 .then((userSnapshot) => {
                   const userData = userSnapshot.val();
                   const postElement = createPostElement(post, userData);
-                  
+
                   // Important: Insert each new post at the beginning of the fragment
                   // This ensures newest posts appear at the top
                   fragment.insertBefore(postElement, fragment.firstChild);
@@ -498,22 +492,22 @@ function createPost() {
     alert("You must be logged in to post.");
     return;
   }
-  
+
   const postInput = document.getElementById("post-input");
   if (!postInput) return;
-  
+
   const content = postInput.value.trim();
   if (!content && !selectedMedia) {
     alert("Please enter some content or add media to your post.");
     return;
   }
-  
+
   const postButton = document.getElementById("post-button");
   if (postButton) postButton.disabled = true;
-  
+
   // Current timestamp to ensure proper ordering
   const timestamp = firebase.database.ServerValue.TIMESTAMP;
-  
+
   // If there is media, upload it first
   if (selectedMedia) {
     uploadMedia(selectedMedia.file, selectedMedia.type)
@@ -534,13 +528,13 @@ function createPost() {
         postInput.value = "";
         clearMediaPreview();
         if (postButton) postButton.disabled = true;
-        
+
         // Collapse expanded post area
         const expandedPostArea = document.getElementById("expanded-post-area");
         if (expandedPostArea) {
           expandedPostArea.classList.remove("ursac-expanded");
         }
-        
+
         // Force refresh posts to ensure new post appears at the top
         loadPosts();
       })
@@ -562,13 +556,13 @@ function createPost() {
         console.log("Post created successfully.");
         postInput.value = "";
         if (postButton) postButton.disabled = true;
-        
+
         // Collapse expanded post area
         const expandedPostArea = document.getElementById("expanded-post-area");
         if (expandedPostArea) {
           expandedPostArea.classList.remove("ursac-expanded");
         }
-        
+
         // Force refresh posts to ensure new post appears at the top
         loadPosts();
       })
@@ -598,12 +592,12 @@ function loadPostsAlternative() {
       function (snapshot) {
         const postsData = snapshot.val();
         const postsFeed = document.getElementById("posts-feed");
-        
+
         if (!postsFeed) {
           console.error("Posts feed element not found");
           return;
         }
-        
+
         postsFeed.innerHTML = "";
 
         if (postsData) {
@@ -616,7 +610,7 @@ function loadPostsAlternative() {
             .sort((a, b) => b.timestamp - a.timestamp); // Ensure newest posts are first
 
           const fragment = document.createDocumentFragment();
-          
+
           // Process posts in order - newest first
           Promise.all(
             postsArray.map((post) => {
@@ -655,7 +649,6 @@ function loadPostsAlternative() {
     );
 }
 
-
 function countLikes(likes) {
   if (!likes) return 0;
   return Object.keys(likes).length;
@@ -673,15 +666,15 @@ function likePost(postId) {
   }
 
   const postRef = firebase.database().ref(`posts/${postId}/likes/${currentUser.uid}`);
-  
+
   // First, check if the post belongs to someone else (to avoid self-notifications)
   firebase.database().ref(`posts/${postId}`).once("value").then(function(postSnapshot) {
     const postData = postSnapshot.val();
     if (!postData) return;
-    
+
     // Don't notify if liking your own post
     const shouldNotify = postData.userId !== currentUser.uid;
-    
+
     postRef.once("value").then(function (snapshot) {
       if (snapshot.exists()) {
         // User is unliking the post
@@ -694,7 +687,7 @@ function likePost(postId) {
         // User is liking the post
         postRef.set(true).then(() => {
           console.log("Post liked successfully.");
-          
+
           // Add notification if it's not the user's own post
           if (shouldNotify) {
             // Store notification under recipient's notifications
@@ -725,11 +718,11 @@ function commentPost(postId, commentText, mediaFile = null, parentCommentId = nu
   // Create a reference for the new comment
   const commentRef = firebase.database().ref(`posts/${postId}/comments`).push();
   const commentId = commentRef.key;
-  
+
   return firebase.database().ref(`users/${currentUser.uid}`).once('value')
     .then(function(userSnapshot) {
       const userData = userSnapshot.val();
-      
+
       // Create comment data object
       const commentData = {
         id: commentId,
@@ -739,12 +732,12 @@ function commentPost(postId, commentText, mediaFile = null, parentCommentId = nu
         text: commentText,
         timestamp: firebase.database.ServerValue.TIMESTAMP
       };
-      
+
       // If this is a reply to another comment, add the parent comment ID
       if (parentCommentId) {
         commentData.parentCommentId = parentCommentId;
       }
-      
+
       // Add media data if available
       if (mediaFile) {
         return uploadMedia(mediaFile.file, mediaFile.type)
@@ -769,7 +762,7 @@ function commentPost(postId, commentText, mediaFile = null, parentCommentId = nu
       return firebase.database().ref(`posts/${postId}`).once('value')
         .then(postSnapshot => {
           const postData = postSnapshot.val();
-          
+
           // Update comment count in the UI
           const postCard = document.querySelector(`[data-post-id="${postId}"]`);
           if (postCard) {
@@ -779,7 +772,7 @@ function commentPost(postId, commentText, mediaFile = null, parentCommentId = nu
               commentCount.textContent = currentCount + 1;
             }
           }
-          
+
           // Don't create notification if commenting on own post
           if (postData && postData.userId !== currentUser.uid) {
             // Create notification for post owner
@@ -794,11 +787,11 @@ function commentPost(postId, commentText, mediaFile = null, parentCommentId = nu
               read: false
             });
           }
-          
+
           // If this is a reply to another comment, also notify the comment owner
           if (parentCommentId && postData && postData.comments && postData.comments[parentCommentId]) {
             const parentComment = postData.comments[parentCommentId];
-            
+
             // Don't notify if replying to your own comment
             if (parentComment.userId !== currentUser.uid) {
               const replyNotifRef = firebase.database().ref(`notifications/${parentComment.userId}`).push();
@@ -814,7 +807,7 @@ function commentPost(postId, commentText, mediaFile = null, parentCommentId = nu
               });
             }
           }
-          
+
           return Promise.resolve();
         });
     })
@@ -867,7 +860,7 @@ function sharePost(postId) {
 function searchPosts(query) {
   const postsFeed = document.getElementById("posts-feed");
   if (!postsFeed) return;
-  
+
   const allPosts = Array.from(postsFeed.getElementsByClassName("ursac-post-card"));
 
   // Filter posts based on the query
@@ -976,7 +969,7 @@ function handleFileSelect(event, type) {
 
   const mediaPreview = document.getElementById("media-preview");
   if (!mediaPreview) return;
-  
+
   const previewItem = document.createElement("div");
   previewItem.className = "ursac-preview-item";
 
@@ -1033,15 +1026,15 @@ function clearMediaPreview() {
     mediaPreview.innerHTML = "";
   }
   selectedMedia = null;
-  
+
   const filePhoto = document.getElementById("file-photo");
   const fileVideo = document.getElementById("file-video");
   const fileAttachment = document.getElementById("file-attachment");
-  
+
   if (filePhoto) filePhoto.value = "";
   if (fileVideo) fileVideo.value = "";
   if (fileAttachment) fileAttachment.value = "";
-  
+
   updatePostButton();
 }
 
@@ -1057,7 +1050,7 @@ function formatFileSize(bytes) {
 function updatePostButton() {
   const postInput = document.getElementById("post-input");
   const postButton = document.getElementById("post-button");
-  
+
   if (postInput && postButton) {
     // Enable post button if there's text content or media selected
     postButton.disabled = postInput.value.trim() === "" && !selectedMedia;
@@ -1181,26 +1174,26 @@ function linkifyText(text) {
 function formatTimeAgo(date) {
   const now = new Date();
   const diffInSeconds = Math.floor((now - date) / 1000);
-  
+
   if (diffInSeconds < 60) {
     return 'Just now';
   }
-  
+
   const diffInMinutes = Math.floor(diffInSeconds / 60);
   if (diffInMinutes < 60) {
     return `${diffInMinutes}m ago`;
   }
-  
+
   const diffInHours = Math.floor(diffInMinutes / 60);
   if (diffInHours < 24) {
     return `${diffInHours}h ago`;
   }
-  
+
   const diffInDays = Math.floor(diffInHours / 24);
   if (diffInDays < 7) {
     return `${diffInDays}d ago`;
   }
-  
+
   const options = { year: 'numeric', month: 'short', day: 'numeric' };
   return date.toLocaleDateString(undefined, options);
 }
@@ -1209,12 +1202,12 @@ function formatTimeAgo(date) {
 function toggleComments(element) {
   const postCard = element.closest('.ursac-post-card');
   if (!postCard) return;
-  
+
   const commentsSection = postCard.querySelector('.ursac-post-comments');
   if (commentsSection) {
     const isVisible = commentsSection.style.display === 'block';
     commentsSection.style.display = isVisible ? 'none' : 'block';
-    
+
     // Load comments if section is being displayed
     if (!isVisible) {
       const postId = postCard.getAttribute('data-post-id');
@@ -1229,17 +1222,17 @@ function toggleComments(element) {
 function loadComments(postId) {
   const postCard = document.querySelector(`[data-post-id="${postId}"]`);
   if (!postCard) return;
-  
+
   const commentsList = postCard.querySelector('.ursac-comments-list');
   if (!commentsList) return;
-  
+
   commentsList.innerHTML = '<div class="ursac-loading">Loading comments...</div>';
-  
+
   firebase.database().ref(`posts/${postId}/comments`).once('value')
-    .then(function(snapshot) {
+    .then(function (snapshot) {
       const comments = snapshot.val();
       commentsList.innerHTML = '';
-      
+
       if (comments) {
         // Convert to array and sort by timestamp
         const commentsArray = Object.entries(comments)
@@ -1248,56 +1241,56 @@ function loadComments(postId) {
             ...comment,
           }))
           .sort((a, b) => a.timestamp - b.timestamp);
-        
-        // First, render top-level comments
-        const topLevelComments = commentsArray.filter(comment => !comment.parentCommentId);
-        
-        if (topLevelComments.length > 0) {
-          topLevelComments.forEach(comment => {
-            // Create comment element
-            const commentElement = createCommentElement(comment, postId);
-            commentsList.appendChild(commentElement);
-            
-            // Find and render replies to this comment
-            const replies = commentsArray.filter(reply => reply.parentCommentId === comment.id);
-            if (replies.length > 0) {
-              const repliesContainer = document.createElement('div');
-              repliesContainer.className = 'ursac-comment-replies';
-              
-              replies.forEach(reply => {
-                const replyElement = createCommentElement(reply, postId, true);
-                repliesContainer.appendChild(replyElement);
-              });
-              
-              commentElement.appendChild(repliesContainer);
+
+        // Create a map of comments by ID for easy lookup
+        const commentMap = {};
+        commentsArray.forEach(comment => {
+          commentMap[comment.id] = comment;
+        });
+
+        // Create a nested structure for comments and replies
+        const nestedComments = [];
+        commentsArray.forEach(comment => {
+          if (comment.parentCommentId) {
+            // This is a reply, add it to its parent's replies array
+            const parent = commentMap[comment.parentCommentId];
+            if (parent) {
+              parent.replies = parent.replies || [];
+              parent.replies.push(comment);
             }
-          });
-        } else {
-          commentsList.innerHTML = '<div class="ursac-no-comments">No comments yet. Be the first to comment!</div>';
-        }
+          } else {
+            // This is a top-level comment
+            nestedComments.push(comment);
+          }
+        });
+
+        // Render the nested comments
+        nestedComments.forEach(comment => {
+          const commentElement = createCommentElement(comment, postId);
+          commentsList.appendChild(commentElement);
+        });
       } else {
         commentsList.innerHTML = '<div class="ursac-no-comments">No comments yet. Be the first to comment!</div>';
       }
     })
-    .catch(function(error) {
+    .catch(function (error) {
       console.error("Error loading comments:", error);
       commentsList.innerHTML = '<div class="ursac-error">Failed to load comments.</div>';
     });
 }
 
-// Function to create a comment element
-function createCommentElement(comment, postId, isReply = false) {
+// Updated function to create a comment element with nested replies
+function createCommentElement(comment, postId, depth = 0) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'ursac-comment-thread';
+
   const commentElement = document.createElement('div');
-  commentElement.className = `ursac-comment ${isReply ? 'ursac-comment-reply' : ''}`;
+  commentElement.className = 'ursac-comment';
   commentElement.setAttribute('data-comment-id', comment.id);
-  
+
   const commentUserInitials = getInitials(comment.userFirstName || '', comment.userLastName || '');
   const commentUserName = `${comment.userFirstName || ''} ${comment.userLastName || ''}`.trim();
-  
-  // Check if the current user is the post owner
-  const postCard = document.querySelector(`[data-post-id="${postId}"]`);
-  const isPostOwner = postCard && currentUser && postCard.getAttribute('data-user-id') === currentUser.uid;
-  
+
   let commentHTML = `
     <div class="ursac-comment-avatar">
       <span>${commentUserInitials}</span>
@@ -1307,20 +1300,21 @@ function createCommentElement(comment, postId, isReply = false) {
       <div class="ursac-comment-text">${comment.text}</div>
       <div class="ursac-comment-time">${formatTimeAgo(new Date(comment.timestamp))}</div>
       <div class="ursac-comment-actions">
-        <button class="ursac-reply-button" onclick="showReplyInput('${postId}', '${comment.id}')">Reply</button>
-        ${isPostOwner ? `<button class="ursac-reply-as-owner-button" onclick="showReplyInput('${postId}', '${comment.id}', true)">Reply as Post Owner</button>` : ''}
+        <button class="ursac-reply-button" onclick="showReplyInput('${postId}', '${comment.id}')">
+          <i class="fas fa-reply"></i> Reply
+        </button>
       </div>
     </div>
   `;
-  
+
   commentElement.innerHTML = commentHTML;
-  
-  // Add reply input container (hidden by default)
+  wrapper.appendChild(commentElement);
+
+  // Add reply input container right after the comment
   const replyContainer = document.createElement('div');
   replyContainer.className = 'ursac-reply-input-container';
   replyContainer.style.display = 'none';
   replyContainer.setAttribute('data-for-comment', comment.id);
-  
   replyContainer.innerHTML = `
     <div class="ursac-comment-input-wrapper">
       <div class="ursac-comment-avatar">
@@ -1334,82 +1328,158 @@ function createCommentElement(comment, postId, isReply = false) {
       </div>
     </div>
   `;
-  
-  commentElement.appendChild(replyContainer);
-  
-  return commentElement;
+
+  wrapper.appendChild(replyContainer);
+
+  // Handle replies if they exist
+  if (comment.replies && comment.replies.length > 0) {
+    const repliesContainer = document.createElement('div');
+    repliesContainer.className = 'ursac-reply-container';
+
+    comment.replies.forEach(reply => {
+      const replyElement = createCommentElement(reply, postId, depth + 1);
+      repliesContainer.appendChild(replyElement);
+    });
+
+    wrapper.appendChild(repliesContainer);
+  }
+
+  return wrapper;
 }
 
-// Function to show reply input
+// Update the showReplyInput function to include event listeners for the input
 function showReplyInput(postId, commentId, asOwner = false) {
-  // Hide all other reply inputs first
+  // First hide all other reply inputs
   document.querySelectorAll('.ursac-reply-input-container').forEach(container => {
     container.style.display = 'none';
   });
-  
-  // Show the reply input for this comment
-  const commentElement = document.querySelector(`.ursac-comment[data-comment-id="${commentId}"]`);
-  if (commentElement) {
-    const replyContainer = commentElement.querySelector(`.ursac-reply-input-container[data-for-comment="${commentId}"]`);
-    if (replyContainer) {
-      replyContainer.style.display = 'block';
-      
-      // Focus the input
-      const replyInput = replyContainer.querySelector('.ursac-reply-input');
-      if (replyInput) {
-        replyInput.focus();
-        
-        // If replying as post owner, add a special prefix
-        if (asOwner) {
-          replyInput.value = '[Post Owner] ';
-          replyInput.setSelectionRange(replyInput.value.length, replyInput.value.length);
-        }
+
+  // Find the comment element
+  const comment = document.querySelector(`.ursac-comment[data-comment-id="${commentId}"]`);
+  if (!comment) return;
+
+  // Find the comment thread (parent container)
+  const commentThread = comment.closest('.ursac-comment-thread');
+  if (!commentThread) return;
+
+  // Find the reply container
+  const replyContainer = commentThread.querySelector(`.ursac-reply-input-container[data-for-comment="${commentId}"]`);
+  if (replyContainer) {
+    // Show the reply container
+    replyContainer.style.display = 'block';
+
+    // Focus the input field
+    const replyInput = replyContainer.querySelector('.ursac-reply-input');
+    if (replyInput) {
+      replyInput.focus();
+
+      // Add post owner prefix if needed
+      if (asOwner) {
+        replyInput.value = '[Post Owner] ';
+        replyInput.setSelectionRange(replyInput.value.length, replyInput.value.length);
       }
+
+      // Add enter key event listener
+      replyInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          const replyText = this.value.trim();
+          if (replyText) {
+            submitReply(postId, commentId);
+          }
+        }
+      });
+
+      // Enable/disable submit button based on input
+      replyInput.addEventListener('input', function() {
+        const submitBtn = replyContainer.querySelector('.ursac-reply-submit');
+        if (submitBtn) {
+          submitBtn.disabled = this.value.trim().length === 0;
+        }
+      });
     }
   }
 }
 
-// Function to submit a reply
+// Update the submitReply function to properly handle the submission
 function submitReply(postId, parentCommentId) {
   if (!currentUser) {
     alert("You must be logged in to reply.");
     return;
   }
-  
-  const commentElement = document.querySelector(`.ursac-comment[data-comment-id="${parentCommentId}"]`);
-  if (!commentElement) return;
-  
-  const replyContainer = commentElement.querySelector(`.ursac-reply-input-container[data-for-comment="${parentCommentId}"]`);
+
+  const commentThread = document.querySelector(`.ursac-comment[data-comment-id="${parentCommentId}"]`)?.closest('.ursac-comment-thread');
+  if (!commentThread) return;
+
+  const replyContainer = commentThread.querySelector(`.ursac-reply-input-container[data-for-comment="${parentCommentId}"]`);
   if (!replyContainer) return;
-  
+
   const replyInput = replyContainer.querySelector('.ursac-reply-input');
   if (!replyInput) return;
-  
+
   const replyText = replyInput.value.trim();
   if (!replyText) return;
-  
-  // Disable input while submitting
+
+  // Disable input and button while submitting
   replyInput.disabled = true;
   const submitBtn = replyContainer.querySelector('.ursac-reply-submit');
   if (submitBtn) submitBtn.disabled = true;
-  
-  // Submit the reply
+
+  // Submit the reply to Firebase
   replyToComment(postId, parentCommentId, replyText)
     .then(() => {
-      // Clear and hide the reply input
+      // Clear and reset the input
       replyInput.value = '';
       replyInput.disabled = false;
-      if (submitBtn) submitBtn.disabled = false;
-      replyContainer.style.display = 'none';
+      if (submitBtn) submitBtn.disabled = true;
       
+      // Hide the reply container
+      replyContainer.style.display = 'none';
+
       // Reload comments to show the new reply
       loadComments(postId);
     })
     .catch(error => {
       console.error("Error posting reply:", error);
+      alert("Failed to post reply. Please try again.");
       replyInput.disabled = false;
       if (submitBtn) submitBtn.disabled = false;
     });
+}
+
+// Function to show reply input
+function showReplyInput(postId, commentId, asOwner = false) {
+  // First hide all other reply inputs
+  document.querySelectorAll('.ursac-reply-input-container').forEach(container => {
+    container.style.display = 'none';
+  });
+
+  // Find the comment element
+  const comment = document.querySelector(`.ursac-comment[data-comment-id="${commentId}"]`);
+  if (!comment) return;
+
+  // Find the comment thread (parent container)
+  const commentThread = comment.closest('.ursac-comment-thread');
+  if (!commentThread) return;
+
+  // Find the reply container
+  const replyContainer = commentThread.querySelector(`.ursac-reply-input-container[data-for-comment="${commentId}"]`);
+  if (replyContainer) {
+    // Show the reply container
+    replyContainer.style.display = 'block';
+
+    // Focus the input field
+    const replyInput = replyContainer.querySelector('.ursac-reply-input');
+    if (replyInput) {
+      replyInput.focus();
+
+      // Add post owner prefix if needed
+      if (asOwner) {
+        replyInput.value = '[Post Owner] ';
+        replyInput.setSelectionRange(replyInput.value.length, replyInput.value.length);
+      }
+    }
+  }
 }
 
 // Initialize comment input listeners
@@ -1423,7 +1493,7 @@ function initializeCommentListeners() {
         button.disabled = input.value.trim().length === 0;
       }
     }
-    
+
     if (e.target.matches('.ursac-reply-input')) {
       const input = e.target;
       const button = input.nextElementSibling;
@@ -1432,7 +1502,7 @@ function initializeCommentListeners() {
       }
     }
   });
-  
+
   // Use event delegation for comment inputs (for Enter key)
   document.addEventListener('keypress', function(e) {
     if (e.key === 'Enter' && e.target.matches('.ursac-comment-input')) {
@@ -1442,7 +1512,7 @@ function initializeCommentListeners() {
         button.click();
       }
     }
-    
+
     if (e.key === 'Enter' && e.target.matches('.ursac-reply-input')) {
       const input = e.target;
       const button = input.nextElementSibling;
@@ -1459,22 +1529,22 @@ function createPost() {
     alert("You must be logged in to post.");
     return;
   }
-  
+
   const postInput = document.getElementById("post-input");
   if (!postInput) return;
-  
+
   const content = postInput.value.trim();
   if (!content && !selectedMedia) {
     alert("Please enter some content or add media to your post.");
     return;
   }
-  
+
   const postButton = document.getElementById("post-button");
   if (postButton) postButton.disabled = true;
-  
+
   // Current timestamp to ensure proper ordering
   const timestamp = firebase.database.ServerValue.TIMESTAMP;
-  
+
   // If there is media, upload it first
   if (selectedMedia) {
     uploadMedia(selectedMedia.file, selectedMedia.type)
@@ -1495,7 +1565,7 @@ function createPost() {
         postInput.value = "";
         clearMediaPreview();
         if (postButton) postButton.disabled = true;
-        
+
         // Collapse expanded post area
         const expandedPostArea = document.getElementById("expanded-post-area");
         if (expandedPostArea) {
@@ -1520,7 +1590,7 @@ function createPost() {
         console.log("Post created successfully.");
         postInput.value = "";
         if (postButton) postButton.disabled = true;
-        
+
         // Collapse expanded post area
         const expandedPostArea = document.getElementById("expanded-post-area");
         if (expandedPostArea) {
@@ -1547,7 +1617,7 @@ function uploadMedia(file, type) {
     const uploadModal = document.getElementById("upload-modal");
     const uploadProgress = document.getElementById("upload-progress");
     const uploadStatus = document.getElementById("upload-status");
-    
+
     if (uploadModal) uploadModal.style.display = "flex";
     if (uploadStatus) uploadStatus.textContent = "0%";
     if (uploadProgress) uploadProgress.style.width = "0%";
@@ -1556,7 +1626,7 @@ function uploadMedia(file, type) {
     const storageRef = firebase.storage().ref();
     const fileExtension = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExtension}`;
-    
+
     // Choose appropriate folder based on file type
     let fileRef;
     if (type === "image") {
@@ -1587,7 +1657,7 @@ function uploadMedia(file, type) {
         // Upload completed successfully
         uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
           if (uploadStatus) uploadStatus.textContent = "Upload complete!";
-          
+
           // Hide modal after a short delay
           setTimeout(() => {
             if (uploadModal) uploadModal.style.display = "none";
@@ -1620,18 +1690,18 @@ window.submitReply = submitReply;
 window.submitComment = function(postId) {
   const postCard = document.querySelector(`[data-post-id="${postId}"]`);
   if (!postCard) return;
-  
+
   const input = postCard.querySelector('.ursac-comment-input');
   if (!input) return;
-  
+
   const commentText = input.value.trim();
   if (!commentText) return;
-  
+
   // Disable input while submitting
   input.disabled = true;
   const submitBtn = input.nextElementSibling;
   if (submitBtn) submitBtn.disabled = true;
-  
+
   commentPost(postId, commentText)
     .then(() => {
       input.value = '';
@@ -1658,79 +1728,134 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Add CSS for comments and replies
-document.addEventListener('DOMContentLoaded', function() {
+function addCommentStyles() {
   const style = document.createElement('style');
   style.textContent = `
+    .ursac-comments-list {
+      margin-top: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .ursac-comment-thread {
+      margin-bottom: 10px;
+    }
+    
     .ursac-comment {
       display: flex;
       padding: 10px;
-      margin-bottom: 10px;
-      position: relative;
+      gap: 10px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      width: 100%;
+      box-sizing: border-box;
     }
-    .ursac-comment-reply {
-      margin-left: 30px;
-      background-color: #f9f9f9;
-      border-left: 3px solid #e0e0e0;
-    }
-    .ursac-comment-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background-color: #4a76a8;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-right: 10px;
-      flex-shrink: 0;
-    }
+
     .ursac-comment-content {
       flex: 1;
+      min-width: 0;
     }
-    .ursac-comment-author {
-      font-weight: 600;
-      margin-bottom: 2px;
-    }
-    .ursac-comment-text {
-      margin-bottom: 5px;
-    }
-    .ursac-comment-time {
-      font-size: 12px;
-      color: #777;
-      margin-bottom: 5px;
-    }
+
     .ursac-comment-actions {
-      display: flex;
-      gap: 10px;
+      margin-top: 8px;
     }
-    .ursac-reply-button, .ursac-reply-as-owner-button {
+
+    .ursac-reply-button {
       background: none;
       border: none;
       color: #4a76a8;
-      font-size: 12px;
       cursor: pointer;
-      padding: 0;
+      padding: 4px 8px;
+      font-size: 12px;
+      border-radius: 4px;
+      transition: background-color 0.2s;
     }
-    .ursac-reply-as-owner-button {
-      color: #ff6b6b;
+
+    .ursac-reply-button:hover {
+      background-color: #ebedf0;
     }
+
     .ursac-reply-input-container {
-      margin-top: 10px;
-      margin-left: 30px;
-      width: calc(100% - 30px);
+      margin-top: 8px;
+      margin-left: 40px;
+      margin-bottom: 8px;
     }
-    .ursac-comment-replies {
-      margin-top: 10px;
-      margin-left: 20px;
-      border-left: 2px solid #e0e0e0;
-      padding-left: 10px;
+
+    .ursac-reply-container {
+      margin-left: 40px;
+      position: relative;
+    }
+
+    .ursac-reply-container::before {
+      content: '';
+      position: absolute;
+      left: -20px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #e1e4e8;
+    }
+
+    .ursac-comment-input-wrapper {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: white;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #e1e4e8;
+    }
+
+    .ursac-comment-avatar {
+      width: 32px;
+      height: 32px;
+      background: #4a76a8;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .ursac-comment-input-container {
+      flex: 1;
+      position: relative;
+    }
+
+    .ursac-reply-input {
+      width: 100%;
+      padding: 8px 40px 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      font-size: 14px;
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    .ursac-reply-submit {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #4a76a8;
+      cursor: pointer;
+    }
+
+    .ursac-reply-submit:disabled {
+      color: #ccc;
+      cursor: not-allowed;
     }
   `;
   document.head.appendChild(style);
-});
+}
 
 // Add CSS for styling the comments and replies
-function addCommentStyles() {
+function addCommentStylesLegacy() {
   const style = document.createElement('style');
   style.textContent = `
     .ursac-comments-list {
@@ -1883,19 +2008,19 @@ function handleCommentMediaUpload(postId, commentInput) {
   fileInput.accept = 'image/*';
   fileInput.style.display = 'none';
   document.body.appendChild(fileInput);
-  
+
   fileInput.addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) {
       document.body.removeChild(fileInput);
       return;
     }
-    
+
     // Create a preview of the selected image
     const previewContainer = document.createElement('div');
     previewContainer.className = 'ursac-comment-media-preview';
     previewContainer.style.marginTop = '10px';
-    
+
     const reader = new FileReader();
     reader.onload = function(e) {
       previewContainer.innerHTML = `
@@ -1904,11 +2029,11 @@ function handleCommentMediaUpload(postId, commentInput) {
           <i class="fas fa-times"></i>
         </button>
       `;
-      
+
       // Add the preview after the comment input
       const inputContainer = commentInput.closest('.ursac-comment-input-container');
       inputContainer.parentNode.insertBefore(previewContainer, inputContainer.nextSibling);
-      
+
       // Add event listener to remove button
       previewContainer.querySelector('.ursac-remove-media').addEventListener('click', function() {
         previewContainer.remove();
@@ -1916,7 +2041,7 @@ function handleCommentMediaUpload(postId, commentInput) {
       });
     };
     reader.readAsDataURL(file);
-    
+
     // Store the file in the input's dataset for later use
     commentInput.dataset.mediaFile = JSON.stringify({
       file: file,
@@ -1924,10 +2049,10 @@ function handleCommentMediaUpload(postId, commentInput) {
       name: file.name,
       size: file.size
     });
-    
+
     document.body.removeChild(fileInput);
   });
-  
+
   fileInput.click();
 }
 
@@ -1935,18 +2060,18 @@ function handleCommentMediaUpload(postId, commentInput) {
 function submitCommentWithMedia(postId) {
   const postCard = document.querySelector(`[data-post-id="${postId}"]`);
   if (!postCard) return;
-  
+
   const input = postCard.querySelector('.ursac-comment-input');
   if (!input) return;
-  
+
   const commentText = input.value.trim();
   if (!commentText) return;
-  
+
   // Disable input while submitting
   input.disabled = true;
   const submitBtn = input.nextElementSibling;
   if (submitBtn) submitBtn.disabled = true;
-  
+
   // Check if there's media attached
   let mediaFile = null;
   if (input.dataset.mediaFile) {
@@ -1956,18 +2081,18 @@ function submitCommentWithMedia(postId) {
       console.error("Error parsing media file data:", e);
     }
   }
-  
+
   commentPost(postId, commentText, mediaFile)
     .then(() => {
       input.value = '';
       input.disabled = false;
       input.dataset.mediaFile = '';
       if (submitBtn) submitBtn.disabled = true;
-      
+
       // Remove any media preview
       const mediaPreview = postCard.querySelector('.ursac-comment-media-preview');
       if (mediaPreview) mediaPreview.remove();
-      
+
       // Reload comments to show the new comment
       loadComments(postId);
     })
@@ -1983,12 +2108,12 @@ function handleMentions(text, postId) {
   // Simple regex to find @username mentions
   const mentionRegex = /@(\w+)/g;
   const mentions = text.match(mentionRegex);
-  
+
   if (!mentions || !mentions.length) return Promise.resolve();
-  
+
   // Get unique usernames (without the @)
   const usernames = [...new Set(mentions.map(m => m.substring(1)))];
-  
+
   // Find users by username and create notifications
   const promises = usernames.map(username => {
     return firebase.database().ref('users')
@@ -1999,10 +2124,10 @@ function handleMentions(text, postId) {
         if (snapshot.exists()) {
           snapshot.forEach(childSnapshot => {
             const userId = childSnapshot.key;
-            
+
             // Don't notify yourself
             if (userId === currentUser.uid) return;
-            
+
             // Create a mention notification
             const notifRef = firebase.database().ref(`notifications/${userId}`).push();
             return notifRef.set({
@@ -2017,7 +2142,7 @@ function handleMentions(text, postId) {
         }
       });
   });
-  
+
   return Promise.all(promises);
 }
 
@@ -2069,14 +2194,14 @@ function addEmojiPicker(inputElement) {
   emojiButton.style.border = 'none';
   emojiButton.style.color = '#777';
   emojiButton.style.cursor = 'pointer';
-  
+
   // Add emoji button next to input
   const inputContainer = inputElement.parentNode;
   inputContainer.insertBefore(emojiButton, inputElement.nextSibling);
-  
+
   // Common emojis
   const commonEmojis = ['😊', '👍', '❤️', '😂', '🎉', '👏', '🙏', '🔥', '😍', '😎'];
-  
+
   // Create emoji picker
   const emojiPicker = document.createElement('div');
   emojiPicker.className = 'ursac-emoji-picker';
@@ -2090,7 +2215,7 @@ function addEmojiPicker(inputElement) {
   emojiPicker.style.padding = '5px';
   emojiPicker.style.zIndex = '100';
   emojiPicker.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
-  
+
   // Add emojis to picker
   commonEmojis.forEach(emoji => {
     const emojiSpan = document.createElement('span');
@@ -2098,48 +2223,48 @@ function addEmojiPicker(inputElement) {
     emojiSpan.style.cursor = 'pointer';
     emojiSpan.style.padding = '5px';
     emojiSpan.style.fontSize = '16px';
-    
+
     emojiSpan.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
-      
+
       // Insert emoji at cursor position
       const cursorPos = inputElement.selectionStart;
       const textBefore = inputElement.value.substring(0, cursorPos);
       const textAfter = inputElement.value.substring(cursorPos);
-      
+
       inputElement.value = textBefore + emoji + textAfter;
-      
+
       // Update cursor position
       const newCursorPos = cursorPos + emoji.length;
       inputElement.setSelectionRange(newCursorPos, newCursorPos);
-      
+
       // Focus back on input
       inputElement.focus();
-      
+
       // Hide emoji picker
       emojiPicker.style.display = 'none';
-      
+
       // Trigger input event to update submit button state
       const event = new Event('input', { bubbles: true });
       inputElement.dispatchEvent(event);
     });
-    
+
     emojiPicker.appendChild(emojiSpan);
   });
-  
+
   // Add emoji picker to input container
   inputContainer.appendChild(emojiPicker);
-  
+
   // Toggle emoji picker on button click
   emojiButton.addEventListener('click', function(e) {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const isVisible = emojiPicker.style.display === 'block';
     emojiPicker.style.display = isVisible ? 'none' : 'block';
   });
-  
+
   // Hide emoji picker when clicking outside
   document.addEventListener('click', function(e) {
     if (!emojiPicker.contains(e.target) && e.target !== emojiButton) {
@@ -2163,16 +2288,16 @@ function addMediaButton(inputElement, postId) {
   mediaButton.style.border = 'none';
   mediaButton.style.color = '#777';
   mediaButton.style.cursor = 'pointer';
-  
+
   // Add media button next to input
   const inputContainer = inputElement.parentNode;
   inputContainer.insertBefore(mediaButton, inputElement.nextSibling);
-  
+
   // Handle media button click
   mediaButton.addEventListener('click', function(e) {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Open file input for image selection
     handleCommentMediaUpload(postId, inputElement);
   });
@@ -2188,7 +2313,7 @@ function enhanceCommentInputs() {
       if (postId) {
         // Add emoji picker
         addEmojiPicker(input);
-        
+
         // Add media button
         addMediaButton(input, postId);
       }
@@ -2200,10 +2325,10 @@ function enhanceCommentInputs() {
 document.addEventListener('DOMContentLoaded', function() {
   // Add comment styles
   addCommentStyles();
-  
+
   // Initialize comment listeners
   initializeCommentListeners();
-  
+
   // Enhance comment inputs after a short delay to ensure DOM is ready
   setTimeout(enhanceCommentInputs, 1000);
 });
@@ -2214,33 +2339,33 @@ function deletePost(postId) {
     alert("You must be logged in to delete a post.");
     return;
   }
-  
+
   // Confirm deletion
   if (!confirm("Are you sure you want to delete this post? This action cannot be undone.")) {
     return;
   }
-  
+
   // Check if the user is the post owner
   firebase.database().ref(`posts/${postId}`).once('value')
     .then(snapshot => {
       const post = snapshot.val();
-      
+
       if (!post) {
         alert("Post not found.");
         return;
       }
-      
+
       if (post.userId !== currentUser.uid) {
         alert("You can only delete your own posts.");
         return;
       }
-      
+
       // Delete the post
       return firebase.database().ref(`posts/${postId}`).remove();
     })
     .then(() => {
       console.log("Post deleted successfully.");
-      
+
       // Remove the post from the UI
       const postElement = document.querySelector(`[data-post-id="${postId}"]`);
       if (postElement) {
@@ -2259,12 +2384,12 @@ function deleteComment(postId, commentId) {
     alert("You must be logged in to delete a comment.");
     return;
   }
-  
+
   // Confirm deletion
   if (!confirm("Are you sure you want to delete this comment? This action cannot be undone.")) {
     return;
   }
-  
+
   // Check if the user is the comment owner or post owner
   Promise.all([
     firebase.database().ref(`posts/${postId}/comments/${commentId}`).once('value'),
@@ -2273,24 +2398,24 @@ function deleteComment(postId, commentId) {
     .then(([commentSnapshot, postSnapshot]) => {
       const comment = commentSnapshot.val();
       const post = postSnapshot.val();
-      
+
       if (!comment) {
         alert("Comment not found.");
         return;
       }
-      
+
       // Allow deletion if user is comment owner or post owner
       if (comment.userId !== currentUser.uid && post.userId !== currentUser.uid) {
         alert("You can only delete your own comments or comments on your posts.");
         return;
       }
-      
+
       // Delete the comment
       return firebase.database().ref(`posts/${postId}/comments/${commentId}`).remove();
     })
     .then(() => {
       console.log("Comment deleted successfully.");
-      
+
       // Reload comments to reflect the deletion
       loadComments(postId);
     })
@@ -2319,7 +2444,7 @@ function debugPostTimestamps() {
           content: post.content?.substring(0, 20) + "..." || "[No content]"
         }))
         .sort((a, b) => b.timestamp - a.timestamp);
-      
+
       console.table(postsArray);
       console.log("Posts are sorted by timestamp (newest first)");
     } else {
@@ -2360,14 +2485,14 @@ document.addEventListener('DOMContentLoaded', addNewPostIndicator);
 function highlightNewPosts() {
   // Get the current timestamp
   const now = Date.now();
-  
+
   // Find all posts
   const posts = document.querySelectorAll('.ursac-post-card');
-  
+
   posts.forEach(post => {
     // Get the post timestamp from a data attribute
     const timestamp = parseInt(post.getAttribute('data-timestamp'));
-    
+
     // If the post is less than 5 seconds old, highlight it
     if (timestamp && (now - timestamp < 5000)) {
       post.classList.add('new-post-highlight');
