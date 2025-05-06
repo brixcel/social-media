@@ -330,20 +330,12 @@
       console.error("Firebase initialization error:", error);
     }
   }
-  function checkCsrfToken() {
-    const token = document.querySelector('meta[name="csrf-token"]');
-    if (token) {
-      console.log("CSRF token found:", token.getAttribute('content').substring(0, 10) + "...");
-    } else {
-      console.error("CSRF token not found in the page!");
-    }
-  }
 
   // Run debug functions when page loads
   document.addEventListener("DOMContentLoaded", function() {
     console.log("Running diagnostics...");
     debugFirebaseConnection();
-    checkCsrfToken();
+   
     
     // Test if DOM elements exist
     const elements = [
