@@ -28,7 +28,7 @@
           </i>
           <span>Notifications</span>
         </a>
-        <a href="" class="ursac-menu-item">
+        <a href="{{ route('messages') }}" class="ursac-menu-item">
           <i class="fas fa-comment"></i>
           <span>Messages</span>
         </a>
