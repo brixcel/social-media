@@ -1,0 +1,1276 @@
+document.addEventListener("DOMContentLoaded", () => {
+  // Firebase references
+  const firebase = window.firebase
+  const database = firebase.database()
+  const storage = firebase.storage()
+
+  // DOM Elements
+  const conversationsList = document.getElementById("conversations-list")
+  const conversationView = document.getElementById("conversation-view")
+  const conversationDefault = document.getElementById("conversation-default")
+  const conversationHeader = document.getElementById("conversation-header")
+  const messagesArea = document.getElementById("messages-area")
+  const messageInputArea = document.getElementById("message-input-area")
+  const messageInput = document.getElementById("message-input")
+  const messageSendBtn = document.getElementById("message-send-btn")
+  const loadingConversations = document.getElementById("loading-conversations")
+  const emptyConversations = document.getElementById("empty-conversations")
+  const newMessageBtn = document.getElementById("new-message-btn")
+  const newMessageBtnAlt = document.getElementById("new-message-btn-alt")
+  const searchInput = document.getElementById("search-input")
+  const newMessageModal = document.getElementById("new-message-modal")
+  const closeNewMessageModal = document.getElementById("close-new-message-modal")
+  const recipientSearch = document.getElementById("recipient-search")
+  const recipientsList = document.getElementById("recipients-list")
+  const newMessageText = document.getElementById("new-message-text")
+  const sendNewMessage = document.getElementById("send-new-message")
+  const cancelNewMessage = document.getElementById("cancel-new-message")
+  const uploadModal = document.getElementById("upload-modal")
+  const uploadProgress = document.getElementById("upload-progress")
+  const uploadStatus = document.getElementById("upload-status")
+
+  // Variables
+  let currentUser = null
+  let currentConversation = null
+  let selectedRecipientId = null
+  let conversations = []
+  let users = []
+  let messages = []
+  let selectedAttachments = []
+  let messagesListener = null
+  let conversationsListener = null
+
+  // Initialize
+  function init() {
+    // Check if user is logged in
+    firebase.auth().onAuthStateChanged((user) => {
+      if (user) {
+        currentUser = user
+        setupUserPresence(user)
+        loadUserProfile(user)
+        loadConversations()
+        setupEventListeners()
+      } else {
+        // For testing purposes, create a mock user if not logged in
+        currentUser = {
+          uid: "mockuser123",
+          email: "test@example.com",
+          displayName: "Test User",
+        }
+        loadUsers() // Load users for testing
+        setupEventListeners()
+        // Show empty state
+        loadingConversations.style.display = "none"
+        emptyConversations.style.display = "flex"
+      }
+    })
+  }
+
+  // Setup user presence system
+  function setupUserPresence(user) {
+    // Create a reference to this user's specific status node
+    const userStatusRef = database.ref(`/status/${user.uid}`)
+
+    // We'll create two references to the user's status
+    const isOfflineForDatabase = {
+      state: "offline",
+      lastChanged: firebase.database.ServerValue.TIMESTAMP,
+    }
+
+    const isOnlineForDatabase = {
+      state: "online",
+      lastChanged: firebase.database.ServerValue.TIMESTAMP,
+    }
+
+    // Create a reference to the special '.info/connected' path in Firebase Realtime Database
+    database.ref(".info/connected").on("value", (snapshot) => {
+      // If we're not currently connected, don't do anything
+      if (snapshot.val() === false) {
+        return
+      }
+
+      // If we are connected, update the user's status
+      userStatusRef
+        .onDisconnect()
+        .set(isOfflineForDatabase)
+        .then(() => {
+          userStatusRef.set(isOnlineForDatabase)
+        })
+        .catch((error) => {
+          console.error("Error setting online status:", error)
+        })
+    })
+  }
+
+  // Load user profile
+  function loadUserProfile(user) {
+    if (!user) return
+
+    database
+      .ref("users/" + user.uid)
+      .once("value")
+      .then((snapshot) => {
+        const userData = snapshot.val()
+
+        // Update profile button
+        const userProfileBtn = document.getElementById("user-profile-btn")
+        if (userData && userProfileBtn) {
+          const initials = getInitials(userData.firstName, userData.lastName)
+          const fullName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+
+          userProfileBtn.innerHTML = `
+            <div class="ursac-profile-avatar">
+              <span>${initials}</span>
+            </div>
+            <div class="ursac-profile-info">
+              <div class="ursac-profile-name">${fullName}</div>
+              <div class="ursac-profile-email">${user.email}</div>
+            </div>
+          `
+        }
+      })
+      .catch((error) => {
+        console.error("Error loading user profile:", error)
+      })
+  }
+
+  // Load conversations
+  function loadConversations() {
+    // Clear existing listener
+    if (conversationsListener) {
+      database.ref("conversations").off("value", conversationsListener)
+    }
+
+    // Show loading state
+    loadingConversations.style.display = "flex"
+    emptyConversations.style.display = "none"
+
+    // Listen for conversations where the current user is a participant
+    conversationsListener = database.ref("conversations").on(
+      "value",
+      (snapshot) => {
+        conversations = []
+
+        if (snapshot.exists()) {
+          snapshot.forEach((childSnapshot) => {
+            const conversation = childSnapshot.val()
+            conversation.id = childSnapshot.key
+
+            // Check if current user is a participant
+            if (
+              conversation.participants &&
+              (conversation.participants[currentUser.uid] || conversation.createdBy === currentUser.uid)
+            ) {
+              conversations.push(conversation)
+            }
+          })
+        }
+
+        // Sort conversations by last message timestamp (newest first)
+        conversations.sort((a, b) => {
+          const aTime = a.lastMessage ? a.lastMessage.timestamp : a.createdAt
+          const bTime = b.lastMessage ? b.lastMessage.timestamp : b.createdAt
+          return bTime - aTime
+        })
+
+        // Render conversations
+        renderConversations()
+
+        // If we have conversations, select the first one
+        if (conversations.length > 0 && !currentConversation) {
+          const firstConversation = conversations[0]
+          const otherParticipantId = Object.keys(firstConversation.participants || {}).find(
+            (id) => id !== currentUser.uid,
+          )
+          selectConversation(firstConversation.id, otherParticipantId)
+        }
+      },
+      (error) => {
+        console.error("Error loading conversations:", error)
+        // Show empty state on error
+        loadingConversations.style.display = "none"
+        emptyConversations.style.display = "flex"
+      },
+    )
+  }
+
+  // Render conversations list
+  function renderConversations() {
+    // Hide loading state
+    loadingConversations.style.display = "none"
+
+    if (conversations.length === 0) {
+      emptyConversations.style.display = "flex"
+      return
+    }
+
+    emptyConversations.style.display = "none"
+
+    // Clear conversation list
+    conversationsList.innerHTML = ""
+
+    // Render each conversation
+    conversations.forEach((conversation) => {
+      // Get the other participant's ID (for 1:1 conversations)
+      const otherParticipantId = Object.keys(conversation.participants || {}).find((id) => id !== currentUser.uid)
+
+      // Get user data for the other participant
+      getUserData(otherParticipantId)
+        .then((userData) => {
+          const userInitials = getInitials(userData.firstName, userData.lastName)
+          const userName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+          const lastMessage = conversation.lastMessage || {}
+          const unreadCount = (conversation.unreadCount && conversation.unreadCount[currentUser.uid]) || 0
+
+          // Format last message time
+          const lastMessageTime = lastMessage.timestamp ? formatTimeAgo(new Date(lastMessage.timestamp)) : ""
+
+          // Format last message text
+          let lastMessageText = lastMessage.text || ""
+          if (lastMessage.mediaURL) {
+            if (lastMessage.mediaType === "image") {
+              lastMessageText = "📷 Photo"
+            } else if (lastMessage.mediaType === "file") {
+              lastMessageText = "📎 File: " + (lastMessage.mediaName || "Attachment")
+            }
+          }
+
+          // Create conversation item
+          const conversationItem = document.createElement("div")
+          conversationItem.className = "ursac-conversation-item"
+          conversationItem.setAttribute("data-conversation-id", conversation.id)
+          conversationItem.setAttribute("data-user-id", otherParticipantId)
+
+          // Set conversation item HTML
+          conversationItem.innerHTML = `
+          <div class="ursac-conversation-avatar">
+            <span>${userInitials}</span>
+          </div>
+          <div class="ursac-conversation-info">
+            <div class="ursac-conversation-name">${userName}</div>
+            <div class="ursac-conversation-message">${lastMessageText}</div>
+          </div>
+          ${unreadCount > 0 ? `<div class="ursac-conversation-unread-badge">${unreadCount}</div>` : ""}
+        `
+
+          // Add click event listener
+          conversationItem.addEventListener("click", () => {
+            selectConversation(conversation.id, otherParticipantId)
+          })
+
+          // Add to conversation list
+          conversationsList.appendChild(conversationItem)
+        })
+        .catch((error) => {
+          console.error("Error rendering conversation:", error)
+        })
+    })
+  }
+
+  // Select a conversation
+  function selectConversation(conversationId, userId) {
+    // Remove active class from all conversation items
+    document.querySelectorAll(".ursac-conversation-item").forEach((item) => {
+      item.classList.remove("active")
+    })
+
+    // Add active class to selected conversation item
+    const selectedItem = document.querySelector(`.ursac-conversation-item[data-conversation-id="${conversationId}"]`)
+    if (selectedItem) {
+      selectedItem.classList.add("active")
+    }
+
+    // Set current conversation and user
+    currentConversation = conversationId
+    selectedRecipientId = userId
+
+    // Show conversation view and hide default view
+    conversationDefault.style.display = "none"
+    conversationHeader.style.display = "flex"
+    messagesArea.style.display = "block"
+    messageInputArea.style.display = "flex"
+
+    // Load user data
+    getUserData(userId)
+      .then((userData) => {
+        // Set conversation header
+        const userInitials = getInitials(userData.firstName, userData.lastName)
+        const userName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+
+        document.getElementById("conversation-avatar-text").textContent = userInitials
+        document.getElementById("conversation-name").textContent = userName
+
+        // Check user status
+        checkUserStatus(userId)
+          .then((isOnline) => {
+            document.getElementById("conversation-status").textContent = isOnline ? "Online" : "Offline"
+          })
+          .catch((error) => {
+            console.error("Error checking user status:", error)
+            document.getElementById("conversation-status").textContent = "Offline"
+          })
+      })
+      .catch((error) => {
+        console.error("Error loading user data:", error)
+      })
+
+    // Load messages
+    loadMessages(conversationId)
+
+    // Mark conversation as read
+    markConversationAsRead(conversationId)
+  }
+
+  // Load messages for a conversation
+  function loadMessages(conversationId) {
+    // Clear existing listener
+    if (messagesListener) {
+      database.ref(`messages/${conversationId}`).off("value", messagesListener)
+    }
+
+    // Show loading spinner
+    messagesArea.innerHTML = `
+      <div class="ursac-loading-state">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Loading messages...</p>
+      </div>
+    `
+
+    // Listen for messages in this conversation
+    messagesListener = database.ref(`messages/${conversationId}`).on(
+      "value",
+      (snapshot) => {
+        messages = []
+
+        if (snapshot.exists()) {
+          snapshot.forEach((childSnapshot) => {
+            const message = childSnapshot.val()
+            message.id = childSnapshot.key
+            messages.push(message)
+          })
+        }
+
+        // Sort messages by timestamp
+        messages.sort((a, b) => a.timestamp - b.timestamp)
+
+        renderMessages()
+      },
+      (error) => {
+        console.error("Error loading messages:", error)
+        messagesArea.innerHTML = `
+        <div class="ursac-empty-state">
+          <i class="fas fa-exclamation-circle"></i>
+          <p>Failed to load messages. Please try again.</p>
+        </div>
+      `
+      },
+    )
+  }
+
+  // Render messages
+  function renderMessages() {
+    if (messages.length === 0) {
+      messagesArea.innerHTML = `
+        <div class="ursac-empty-state">
+          <i class="fas fa-comment-dots"></i>
+          <p>No messages yet. Start the conversation!</p>
+        </div>
+      `
+      return
+    }
+
+    // Clear messages container
+    messagesArea.innerHTML = ""
+
+    // Group messages by date
+    const messagesByDate = groupMessagesByDate(messages)
+
+    // Render each date group
+    Object.keys(messagesByDate).forEach((date) => {
+      // Add date separator
+      const dateSeparator = document.createElement("div")
+      dateSeparator.className = "ursac-message-date"
+      dateSeparator.textContent = date
+      messagesArea.appendChild(dateSeparator)
+
+      // Render messages for this date
+      messagesByDate[date].forEach((message) => {
+        const messageEl = renderMessage(message)
+        messagesArea.appendChild(messageEl)
+      })
+    })
+
+    // Scroll to bottom
+    messagesArea.scrollTop = messagesArea.scrollHeight
+  }
+
+  // Send a message
+  function sendMessage() {
+    const text = messageInput.value.trim()
+
+    if (!text && selectedAttachments.length === 0) {
+      return
+    }
+
+    // Disable send button while sending
+    messageSendBtn.disabled = true
+
+    if (selectedAttachments.length > 0) {
+      // Show upload modal
+      uploadModal.style.display = "flex"
+      uploadProgress.style.width = "0%"
+      uploadStatus.textContent = "0%"
+
+      // Upload the attachment
+      uploadAttachment(selectedAttachments[0])
+        .then((mediaData) => {
+          // Create message with media
+          createMessage(text, mediaData)
+
+          // Clear input and attachments
+          messageInput.value = ""
+          selectedAttachments = []
+
+          // Hide upload modal
+          uploadModal.style.display = "none"
+
+          // Enable send button
+          messageSendBtn.disabled = false
+        })
+        .catch((error) => {
+          console.error("Error uploading attachment:", error)
+          alert("Failed to upload attachment. Please try again.")
+
+          // Hide upload modal
+          uploadModal.style.display = "none"
+
+          // Enable send button
+          messageSendBtn.disabled = false
+        })
+    } else {
+      // Create message without media
+      createMessage(text)
+
+      // Clear input
+      messageInput.value = ""
+
+      // Enable send button
+      messageSendBtn.disabled = false
+    }
+  }
+
+  // Create a new message
+  function createMessage(text, mediaData = null) {
+    if (!currentConversation || !currentUser) return
+
+    const messageRef = database.ref(`messages/${currentConversation}`).push()
+
+    const message = {
+      senderId: currentUser.uid,
+      text: text,
+      timestamp: firebase.database.ServerValue.TIMESTAMP,
+      read: false,
+    }
+
+    // Add media data if available
+    if (mediaData) {
+      message.mediaURL = mediaData.url
+      message.mediaType = mediaData.type
+      message.mediaName = mediaData.name
+      message.mediaSize = mediaData.size
+    }
+
+    // Save message
+    messageRef
+      .set(message)
+      .then(() => {
+        // Update conversation last message
+        database
+          .ref(`conversations/${currentConversation}`)
+          .update({
+            lastMessage: {
+              text: text,
+              senderId: currentUser.uid,
+              timestamp: firebase.database.ServerValue.TIMESTAMP,
+              mediaURL: mediaData ? mediaData.url : null,
+              mediaType: mediaData ? mediaData.type : null,
+              mediaName: mediaData ? mediaData.name : null,
+            },
+          })
+          .catch((error) => {
+            console.error("Error updating conversation last message:", error)
+          })
+
+        // Increment unread count for the other user
+        const updates = {}
+        updates[`conversations/${currentConversation}/unreadCount/${selectedRecipientId}`] =
+          firebase.database.ServerValue.increment(1)
+        database
+          .ref()
+          .update(updates)
+          .catch((error) => {
+            console.error("Error updating unread count:", error)
+          })
+      })
+      .catch((error) => {
+        console.error("Error creating message:", error)
+        alert("Failed to send message. Please try again.")
+      })
+  }
+
+  // Create a new conversation
+  function createConversation(recipientId, initialMessage) {
+    return new Promise((resolve, reject) => {
+      if (!recipientId) {
+        reject(new Error("No recipient selected"))
+        return
+      }
+
+      // Check if conversation already exists
+      const existingConversation = conversations.find((conv) => {
+        return conv.participants && conv.participants[recipientId] && conv.participants[currentUser.uid]
+      })
+
+      if (existingConversation) {
+        // If conversation exists, just return its ID
+        if (initialMessage && initialMessage.trim() !== "") {
+          // Send the initial message to the existing conversation
+          const messageRef = database.ref(`messages/${existingConversation.id}`).push()
+
+          const message = {
+            senderId: currentUser.uid,
+            text: initialMessage,
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            read: false,
+          }
+
+          messageRef
+            .set(message)
+            .then(() => {
+              // Update conversation last message
+              return database.ref(`conversations/${existingConversation.id}`).update({
+                lastMessage: {
+                  text: initialMessage,
+                  senderId: currentUser.uid,
+                  timestamp: firebase.database.ServerValue.TIMESTAMP,
+                },
+              })
+            })
+            .then(() => {
+              // Increment unread count for the recipient
+              const updates = {}
+              updates[`conversations/${existingConversation.id}/unreadCount/${recipientId}`] =
+                firebase.database.ServerValue.increment(1)
+              return database.ref().update(updates)
+            })
+            .then(() => {
+              resolve(existingConversation.id)
+            })
+            .catch((error) => {
+              reject(error)
+            })
+        } else {
+          resolve(existingConversation.id)
+        }
+        return
+      }
+
+      // Create a new conversation if it doesn't exist
+      const conversationRef = database.ref("conversations").push()
+
+      const participants = {}
+      participants[currentUser.uid] = true
+      participants[recipientId] = true
+
+      const conversation = {
+        createdBy: currentUser.uid,
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        participants: participants,
+        unreadCount: {},
+      }
+
+      conversation.unreadCount[recipientId] = 0
+      conversation.unreadCount[currentUser.uid] = 0
+
+      conversationRef
+        .set(conversation)
+        .then(() => {
+          const conversationId = conversationRef.key
+
+          // If we have an initial message, send it
+          if (initialMessage && initialMessage.trim() !== "") {
+            const messageRef = database.ref(`messages/${conversationId}`).push()
+
+            const message = {
+              senderId: currentUser.uid,
+              text: initialMessage,
+              timestamp: firebase.database.ServerValue.TIMESTAMP,
+              read: false,
+            }
+
+            return messageRef.set(message).then(() => {
+              // Update conversation last message
+              return database
+                .ref(`conversations/${conversationId}`)
+                .update({
+                  lastMessage: {
+                    text: initialMessage,
+                    senderId: currentUser.uid,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                  },
+                })
+                .then(() => {
+                  // Increment unread count for the recipient
+                  const updates = {}
+                  updates[`conversations/${conversationId}/unreadCount/${recipientId}`] = 1
+                  return database
+                    .ref()
+                    .update(updates)
+                    .then(() => conversationId)
+                })
+            })
+          }
+
+          return conversationId
+        })
+        .then((conversationId) => {
+          resolve(conversationId)
+        })
+        .catch((error) => {
+          console.error("Error creating conversation:", error)
+          reject(error)
+        })
+    })
+  }
+
+  // Mark conversation as read
+  function markConversationAsRead(conversationId) {
+    const updates = {}
+    updates[`conversations/${conversationId}/unreadCount/${currentUser.uid}`] = 0
+    database
+      .ref()
+      .update(updates)
+      .catch((error) => {
+        console.error("Error marking conversation as read:", error)
+      })
+
+    // Mark all messages as read
+    database
+      .ref(`messages/${conversationId}`)
+      .once("value", (snapshot) => {
+        if (snapshot.exists()) {
+          snapshot.forEach((childSnapshot) => {
+            const message = childSnapshot.val()
+
+            if (message.senderId !== currentUser.uid && !message.read) {
+              database
+                .ref(`messages/${conversationId}/${childSnapshot.key}`)
+                .update({
+                  read: true,
+                })
+                .catch((error) => {
+                  console.error("Error marking message as read:", error)
+                })
+            }
+          })
+        }
+      })
+      .catch((error) => {
+        console.error("Error getting messages to mark as read:", error)
+      })
+  }
+
+  // Upload an attachment
+  function uploadAttachment(file) {
+    return new Promise((resolve, reject) => {
+      // Create storage reference
+      const storageRef = storage.ref()
+      const fileExtension = file.name.split(".").pop()
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExtension}`
+
+      // Choose appropriate folder based on file type
+      let fileRef
+      let fileType
+
+      if (file.type.startsWith("image/")) {
+        fileRef = storageRef.child(`messages/images/${fileName}`)
+        fileType = "image"
+      } else {
+        fileRef = storageRef.child(`messages/files/${fileName}`)
+        fileType = "file"
+      }
+
+      // Upload the file
+      const uploadTask = fileRef.put(file)
+
+      // Monitor upload progress
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+          uploadProgress.style.width = progress + "%"
+          uploadStatus.textContent = Math.round(progress) + "%"
+        },
+        (error) => {
+          reject(error)
+        },
+        () => {
+          // Upload completed successfully
+          uploadTask.snapshot.ref
+            .getDownloadURL()
+            .then((downloadURL) => {
+              resolve({
+                url: downloadURL,
+                type: fileType,
+                name: file.name,
+                size: formatFileSize(file.size),
+              })
+            })
+            .catch((error) => {
+              reject(error)
+            })
+        },
+      )
+    })
+  }
+
+  // Load users for new conversation modal
+  function loadUsers() {
+    database
+      .ref("users")
+      .once("value", (snapshot) => {
+        users = []
+
+        if (snapshot.exists()) {
+          snapshot.forEach((childSnapshot) => {
+            const user = childSnapshot.val()
+            user.id = childSnapshot.key
+
+            // Don't include current user
+            if (user.id !== currentUser.uid) {
+              users.push(user)
+            }
+          })
+        } else {
+          // For testing, create some mock users if no users exist
+          users = [
+            { id: "user1", firstName: "John", lastName: "Doe" },
+            { id: "user2", firstName: "Jane", lastName: "Smith" },
+            { id: "user3", firstName: "Bob", lastName: "Johnson" },
+            { id: "user4", firstName: "Alice", lastName: "Williams" },
+          ]
+        }
+
+        renderRecipientsList(users)
+      })
+      .catch((error) => {
+        console.error("Error loading users:", error)
+        // For testing, create some mock users if loading fails
+        users = [
+          { id: "user1", firstName: "John", lastName: "Doe" },
+          { id: "user2", firstName: "Jane", lastName: "Smith" },
+          { id: "user3", firstName: "Bob", lastName: "Johnson" },
+          { id: "user4", firstName: "Alice", lastName: "Williams" },
+        ]
+        renderRecipientsList(users)
+      })
+  }
+
+  // Render recipients list
+  function renderRecipientsList(usersList) {
+    if (usersList.length === 0) {
+      recipientsList.innerHTML = `
+        <div class="ursac-empty-state">
+          <p>No users found</p>
+        </div>
+      `
+      return
+    }
+
+    let html = ""
+
+    usersList.forEach((user) => {
+      const userInitials = getInitials(user.firstName, user.lastName)
+      const userName = `${user.firstName || ""} ${user.lastName || ""}`.trim()
+
+      html += `
+        <div class="ursac-recipient-item" data-user-id="${user.id}">
+          <div class="ursac-recipient-avatar">
+            <span>${userInitials}</span>
+          </div>
+          <div class="ursac-recipient-info">
+            <div class="ursac-recipient-name">${userName}</div>
+          </div>
+        </div>
+      `
+    })
+
+    recipientsList.innerHTML = html
+
+    // Add click event listeners to recipient items
+    document.querySelectorAll(".ursac-recipient-item").forEach((item) => {
+      item.addEventListener("click", function () {
+        // Remove selected class from all items
+        document.querySelectorAll(".ursac-recipient-item").forEach((el) => {
+          el.classList.remove("selected")
+        })
+
+        // Add selected class to this item
+        this.classList.add("selected")
+
+        // Set selected recipient
+        selectedRecipientId = this.getAttribute("data-user-id")
+      })
+    })
+  }
+
+  // Setup event listeners
+  function setupEventListeners() {
+    // Send message on button click
+    if (messageSendBtn) {
+      messageSendBtn.addEventListener("click", sendMessage)
+    }
+
+    // Send message on Enter key (but allow Shift+Enter for new line)
+    if (messageInput) {
+      messageInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault()
+          sendMessage()
+        }
+      })
+
+      // Enable/disable send button based on input
+      messageInput.addEventListener("input", () => {
+        messageSendBtn.disabled = messageInput.value.trim() === "" && selectedAttachments.length === 0
+      })
+    }
+
+    // Open new message modal
+    if (newMessageBtn) {
+      newMessageBtn.addEventListener("click", openNewMessageModal)
+    }
+
+    if (newMessageBtnAlt) {
+      newMessageBtnAlt.addEventListener("click", openNewMessageModal)
+    }
+
+    // Close new message modal
+    if (closeNewMessageModal) {
+      closeNewMessageModal.addEventListener("click", () => {
+        newMessageModal.style.display = "none"
+      })
+    }
+
+    // Search conversations
+    if (searchInput) {
+      searchInput.addEventListener("input", () => {
+        const searchTerm = searchInput.value.toLowerCase()
+
+        if (searchTerm === "") {
+          renderConversations()
+          return
+        }
+
+        // Filter conversations based on search term
+        const filteredConversations = conversations.filter((conversation) => {
+          // Get the other participant's ID
+          const otherParticipantId = Object.keys(conversation.participants || {}).find((id) => id !== currentUser.uid)
+
+          // Get user data for the other participant
+          return getUserData(otherParticipantId).then((userData) => {
+            const userName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim().toLowerCase()
+            return userName.includes(searchTerm)
+          })
+        })
+
+        // Render filtered conversations
+        renderConversations(filteredConversations)
+      })
+    }
+
+    // Search recipients
+    if (recipientSearch) {
+      recipientSearch.addEventListener("input", () => {
+        const searchTerm = recipientSearch.value.toLowerCase()
+
+        if (searchTerm === "") {
+          renderRecipientsList(users)
+          return
+        }
+
+        // Filter users based on search term
+        const filteredUsers = users.filter((user) => {
+          const userName = `${user.firstName || ""} ${user.lastName || ""}`.trim().toLowerCase()
+          return userName.includes(searchTerm)
+        })
+
+        renderRecipientsList(filteredUsers)
+      })
+    }
+
+    // Send new message
+    if (sendNewMessage) {
+      sendNewMessage.addEventListener("click", () => {
+        if (!selectedRecipientId) {
+          alert("Please select a recipient")
+          return
+        }
+
+        const messageText = newMessageText ? newMessageText.value.trim() : ""
+
+        // Create new conversation with initial message
+        createConversation(selectedRecipientId, messageText)
+          .then((conversationId) => {
+            // Close modal
+            if (newMessageModal) {
+              newMessageModal.style.display = "none"
+            }
+
+            // Reset form
+            if (newMessageText) {
+              newMessageText.value = ""
+            }
+
+            // Select the new conversation
+            selectConversation(conversationId, selectedRecipientId)
+          })
+          .catch((error) => {
+            console.error("Error creating conversation:", error)
+            alert("Failed to create conversation. Please try again.")
+          })
+      })
+    }
+
+    // Cancel new message
+    if (cancelNewMessage) {
+      cancelNewMessage.addEventListener("click", () => {
+        if (newMessageModal) {
+          newMessageModal.style.display = "none"
+        }
+        selectedRecipientId = null
+        if (newMessageText) {
+          newMessageText.value = ""
+        }
+      })
+    }
+
+    // Close modals when clicking outside
+    window.addEventListener("click", (e) => {
+      if (newMessageModal && e.target === newMessageModal) {
+        newMessageModal.style.display = "none"
+      }
+
+      if (uploadModal && e.target === uploadModal) {
+        uploadModal.style.display = "none"
+      }
+    })
+
+    // Attachment buttons
+    const attachmentBtn = document.querySelector(".ursac-message-attachment-btn")
+    const mediaBtn = document.querySelector(".ursac-message-media-btn")
+
+    if (attachmentBtn) {
+      attachmentBtn.addEventListener("click", () => {
+        // Create a file input element
+        const fileInput = document.createElement("input")
+        fileInput.type = "file"
+        fileInput.accept = ".pdf,.doc,.docx,.xls,.xlsx,.txt"
+        fileInput.style.display = "none"
+        document.body.appendChild(fileInput)
+
+        fileInput.addEventListener("change", () => {
+          if (fileInput.files.length > 0) {
+            selectedAttachments = [fileInput.files[0]]
+            messageSendBtn.disabled = false
+            sendMessage()
+          }
+          document.body.removeChild(fileInput)
+        })
+
+        fileInput.click()
+      })
+    }
+
+    if (mediaBtn) {
+      mediaBtn.addEventListener("click", () => {
+        // Create a file input element
+        const fileInput = document.createElement("input")
+        fileInput.type = "file"
+        fileInput.accept = "image/*"
+        fileInput.style.display = "none"
+        document.body.appendChild(fileInput)
+
+        fileInput.addEventListener("change", () => {
+          if (fileInput.files.length > 0) {
+            selectedAttachments = [fileInput.files[0]]
+            messageSendBtn.disabled = false
+            sendMessage()
+          }
+          document.body.removeChild(fileInput)
+        })
+
+        fileInput.click()
+      })
+    }
+
+    // User profile dropdown
+    const userProfileBtn = document.getElementById("user-profile-btn")
+    const profileDropdown = document.getElementById("user-profile-dropdown")
+
+    if (userProfileBtn && profileDropdown) {
+      userProfileBtn.addEventListener("click", (e) => {
+        e.stopPropagation()
+        profileDropdown.style.display = profileDropdown.style.display === "block" ? "none" : "block"
+      })
+
+      document.addEventListener("click", (e) => {
+        if (!profileDropdown.contains(e.target) && !userProfileBtn.contains(e.target)) {
+          profileDropdown.style.display = "none"
+        }
+      })
+    }
+
+    // Logout button
+    const logoutBtn = document.getElementById("logout-btn")
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", () => {
+        firebase
+          .auth()
+          .signOut()
+          .then(() => {
+            window.location.href = "/login"
+          })
+          .catch((error) => {
+            console.error("Error signing out:", error)
+          })
+      })
+    }
+  }
+
+  // Open new message modal
+  function openNewMessageModal() {
+    // Load users
+    loadUsers()
+
+    // Reset form
+    selectedRecipientId = null
+    if (newMessageText) {
+      newMessageText.value = ""
+    }
+
+    // Show modal
+    if (newMessageModal) {
+      newMessageModal.style.display = "flex"
+    }
+  }
+
+  // Render a single message
+  function renderMessage(message) {
+    const isSent = message.senderId === currentUser.uid
+    const messageEl = document.createElement("div")
+    messageEl.className = `ursac-message ${isSent ? "ursac-message-sent" : "ursac-message-received"}`
+    messageEl.setAttribute("data-message-id", message.id)
+
+    // For received messages, add avatar
+    if (!isSent) {
+      getUserData(message.senderId)
+        .then((userData) => {
+          const userInitials = getInitials(userData.firstName, userData.lastName)
+          const avatarEl = messageEl.querySelector(".ursac-message-avatar span")
+          if (avatarEl) {
+            avatarEl.textContent = userInitials
+          }
+        })
+        .catch((error) => {
+          console.error("Error getting user data for message:", error)
+        })
+    }
+
+    // Create message content
+    let messageContent = `
+      ${!isSent ? `<div class="ursac-message-avatar"><span>JS</span></div>` : ""}
+      <div class="ursac-message-content">
+        <div class="ursac-message-bubble">
+          ${message.text || ""}
+        </div>
+        <div class="ursac-message-time">${formatTime(new Date(message.timestamp))}</div>
+      </div>
+    `
+
+    // Add media content if available
+    if (message.mediaURL) {
+      if (message.mediaType === "image") {
+        messageContent = `
+          ${!isSent ? `<div class="ursac-message-avatar"><span>JS</span></div>` : ""}
+          <div class="ursac-message-content">
+            <div class="ursac-message-bubble">
+              ${message.text ? `${message.text}<br><br>` : ""}
+              <img src="${message.mediaURL}" alt="Image" style="max-width: 200px; max-height: 200px; border-radius: 8px;">
+            </div>
+            <div class="ursac-message-time">${formatTime(new Date(message.timestamp))}</div>
+          </div>
+        `
+      } else if (message.mediaType === "file") {
+        messageContent = `
+          ${!isSent ? `<div class="ursac-message-avatar"><span>JS</span></div>` : ""}
+          <div class="ursac-message-content">
+            <div class="ursac-message-bubble">
+              ${message.text ? `${message.text}<br><br>` : ""}
+              <div class="ursac-message-file">
+                <i class="fas fa-file"></i>
+                <div class="ursac-message-file-info">
+                  <div class="ursac-message-file-name">${message.mediaName || "File"}</div>
+                  <div class="ursac-message-file-size">${message.mediaSize || ""}</div>
+                </div>
+              </div>
+            </div>
+            <div class="ursac-message-time">${formatTime(new Date(message.timestamp))}</div>
+          </div>
+        `
+      }
+    }
+
+    messageEl.innerHTML = messageContent
+    return messageEl
+  }
+
+  // Helper function to get user data
+  function getUserData(userId) {
+    return new Promise((resolve, reject) => {
+      if (!userId) {
+        resolve({
+          firstName: "Unknown",
+          lastName: "User",
+        })
+        return
+      }
+
+      database
+        .ref(`users/${userId}`)
+        .once("value", (snapshot) => {
+          if (snapshot.exists()) {
+            resolve(snapshot.val())
+          } else {
+            resolve({
+              firstName: "Unknown",
+              lastName: "User",
+            })
+          }
+        })
+        .catch((error) => {
+          console.error("Error getting user data:", error)
+          resolve({
+            firstName: "Unknown",
+            lastName: "User",
+          })
+        })
+    })
+  }
+
+  // Helper function to check user status
+  function checkUserStatus(userId) {
+    return new Promise((resolve, reject) => {
+      if (!userId) {
+        resolve(false)
+        return
+      }
+
+      database
+        .ref(`status/${userId}`)
+        .once("value", (snapshot) => {
+          if (snapshot.exists() && snapshot.val().state === "online") {
+            resolve(true)
+          } else {
+            resolve(false)
+          }
+        })
+        .catch((error) => {
+          console.error("Error checking user status:", error)
+          resolve(false)
+        })
+    })
+  }
+
+  // Helper function to get initials from name
+  function getInitials(firstName, lastName) {
+    let initials = ""
+    if (firstName) initials += firstName.charAt(0).toUpperCase()
+    if (lastName) initials += lastName.charAt(0).toUpperCase()
+    return initials || "?"
+  }
+
+  // Helper function to format time
+  function formatTime(date) {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  }
+
+  // Helper function to format date
+  function formatDate(date) {
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    if (date.toDateString() === today.toDateString()) {
+      return "Today"
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return "Yesterday"
+    } else {
+      return date.toLocaleDateString()
+    }
+  }
+
+  // Helper function to format time ago
+  function formatTimeAgo(date) {
+    const now = new Date()
+    const diffInSeconds = Math.floor((now - date) / 1000)
+
+    if (diffInSeconds < 60) {
+      return "Just now"
+    }
+
+    const diffInMinutes = Math.floor(diffInSeconds / 60)
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes}m ago`
+    }
+
+    const diffInHours = Math.floor(diffInMinutes / 60)
+    if (diffInHours < 24) {
+      return `${diffInHours}h ago`
+    }
+
+    const diffInDays = Math.floor(diffInHours / 24)
+    if (diffInDays < 7) {
+      return `${diffInDays}d ago`
+    }
+
+    return formatDate(date)
+  }
+
+  // Helper function to format file size
+  function formatFileSize(bytes) {
+    if (bytes === 0) return "0 Bytes"
+    const k = 1024
+    const sizes = ["Bytes", "KB", "MB", "GB"]
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+  }
+
+  // Group messages by date
+  function groupMessagesByDate(messages) {
+    const groups = {}
+
+    messages.forEach((message) => {
+      const date = formatDate(new Date(message.timestamp))
+      if (!groups[date]) {
+        groups[date] = []
+      }
+      groups[date].push(message)
+    })
+
+    return groups
+  }
+
+  // Initialize the app
+  init()
+})
