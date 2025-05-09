@@ -336,6 +336,12 @@ body {
     text-decoration: underline;
 }
 
+.login-main-ctn {
+  display: flex;
+  margin: auto;
+  align-items: center;
+}
+
 .login-container {
     background: var(--white);
     display: block;
@@ -345,6 +351,8 @@ body {
     box-shadow: var(--shadow);
     max-width: 400px;
     width: 100%;
+    margin-left: 35%;
+    margin-top: 10%;
 }
 
 .login-logo {
