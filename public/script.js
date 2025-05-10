@@ -404,9 +404,7 @@ document.addEventListener('DOMContentLoaded', function () {
   initializeCommentListeners();
 });
 
-// The key function that needs modification is loadPosts()
-// Here's the updated version to ensure latest posts are at the top
-
+// Completely rewritten loadPosts function to ensure newest posts are at the top
 function loadPosts() {
   // Remove any existing listener to prevent duplicates
   if (postsListener) {
@@ -415,75 +413,80 @@ function loadPosts() {
   }
 
   const postsRef = firebase.database().ref("posts");
-  postsListener = postsRef
-    .orderByChild("timestamp")
-    .on(
-      "value",
-      function (snapshot) {
-        const postsData = snapshot.val();
-        const postsFeed = document.getElementById("posts-feed");
+  postsListener = postsRef.on("value", async function(snapshot) {
+    const postsData = snapshot.val();
+    const postsFeed = document.getElementById("posts-feed");
 
-        if (!postsFeed) {
-          console.error("Posts feed element not found");
-          return;
+    if (!postsFeed) {
+      console.error("Posts feed element not found");
+      return;
+    }
+
+    // Clear the feed
+    postsFeed.innerHTML = "";
+
+    if (!postsData) {
+      postsFeed.innerHTML = `
+        <div class="ursac-post-card">
+          <div class="ursac-post-content" style="text-align: center;">
+            No posts yet. Be the first to post something!
+          </div>
+        </div>
+      `;
+      postsLoaded = true;
+      return;
+    }
+
+    try {
+      // Convert to array and sort by timestamp in descending order (newest first)
+      const postsArray = Object.entries(postsData)
+        .map(([id, post]) => ({
+          id,
+          ...post,
+        }))
+        .sort((a, b) => b.timestamp - a.timestamp);
+
+      console.log("Posts sorted by timestamp (newest first):", 
+        postsArray.map(p => ({ 
+          id: p.id, 
+          timestamp: p.timestamp,
+          time: new Date(p.timestamp).toLocaleTimeString(),
+          content: p.content?.substring(0, 15) || "[No content]"
+        }))
+      );
+
+      // Process each post one by one, in order
+      for (const post of postsArray) {
+        try {
+          const userSnapshot = await firebase.database().ref("users/" + post.userId).once("value");
+          const userData = userSnapshot.val();
+          const postElement = createPostElement(post, userData);
+          
+          // Add timestamp as data attribute for debugging
+          postElement.setAttribute('data-timestamp', post.timestamp);
+          postElement.setAttribute('data-time', new Date(post.timestamp).toLocaleTimeString());
+          
+          // Add the post to the feed (newest first)
+          postsFeed.appendChild(postElement);
+        } catch (error) {
+          console.error(`Error processing post ${post.id}:`, error);
         }
-
-        postsFeed.innerHTML = "";
-
-        if (postsData) {
-          // Convert to array and sort by timestamp in descending order (newest first)
-          const postsArray = Object.entries(postsData)
-            .map(([id, post]) => ({
-              id,
-              ...post,
-            }))
-            .sort((a, b) => b.timestamp - a.timestamp); // Ensure newest posts are first
-
-          console.log("Posts sorted by timestamp (newest first):",
-            postsArray.map(p => ({ id: p.id, timestamp: p.timestamp })));
-
-          // Create a new fragment to hold all posts
-          const fragment = document.createDocumentFragment();
-
-          // Process posts in order - newest first
-          Promise.all(
-            postsArray.map((post) => {
-              return firebase
-                .database()
-                .ref("users/" + post.userId)
-                .once("value")
-                .then((userSnapshot) => {
-                  const userData = userSnapshot.val();
-                  const postElement = createPostElement(post, userData);
-
-                  // Important: Insert each new post at the beginning of the fragment
-                  // This ensures newest posts appear at the top
-                  fragment.insertBefore(postElement, fragment.firstChild);
-                })
-                .catch((error) => {
-                  console.error("Error loading user data for post:", error);
-                });
-            })
-          ).then(() => {
-            // Clear the feed and add all posts
-            postsFeed.innerHTML = "";
-            postsFeed.appendChild(fragment);
-          });
-        } else {
-          postsFeed.innerHTML = `
-            <div class="ursac-post-card">
-              <div class="ursac-post-content" style="text-align: center;">
-                No posts yet. Be the first to post something!
-              </div>
-            </div>
-          `;
-        }
-        postsLoaded = true;
-      },
-      function (error) {
-        console.error("Error loading posts:", error);
       }
-    );
+    } catch (error) {
+      console.error("Error loading posts:", error);
+      postsFeed.innerHTML = `
+        <div class="ursac-post-card">
+          <div class="ursac-post-content" style="text-align: center;">
+            Error loading posts. Please refresh the page.
+          </div>
+        </div>
+      `;
+    }
+    
+    postsLoaded = true;
+  }, function(error) {
+    console.error("Error loading posts:", error);
+  });
 }
 
 // Also update the createPost function to ensure new posts appear at the top immediately
@@ -506,7 +509,7 @@ function createPost() {
   if (postButton) postButton.disabled = true;
 
   // Current timestamp to ensure proper ordering
-  const timestamp = firebase.database.ServerValue.TIMESTAMP;
+  const timestamp = Date.now(); // Use client timestamp for immediate feedback
 
   // If there is media, upload it first
   if (selectedMedia) {
@@ -516,7 +519,7 @@ function createPost() {
         return newPostRef.set({
           userId: currentUser.uid,
           content: content,
-          timestamp: timestamp, // Use server timestamp for accurate ordering
+          timestamp: timestamp, // Use client timestamp for immediate ordering
           mediaURL: mediaData.url,
           mediaType: mediaData.type,
           mediaName: mediaData.name,
@@ -524,7 +527,7 @@ function createPost() {
         });
       })
       .then(() => {
-        console.log("Post with media created successfully.");
+        console.log("Post with media created successfully at timestamp:", timestamp);
         postInput.value = "";
         clearMediaPreview();
         if (postButton) postButton.disabled = true;
@@ -536,7 +539,7 @@ function createPost() {
         }
 
         // Force refresh posts to ensure new post appears at the top
-        loadPosts();
+        // No need to call loadPosts() as the Firebase listener will trigger
       })
       .catch((error) => {
         console.error("Error creating post with media:", error);
@@ -550,10 +553,10 @@ function createPost() {
       .set({
         userId: currentUser.uid,
         content: content,
-        timestamp: timestamp, // Use server timestamp for accurate ordering
+        timestamp: timestamp, // Use client timestamp for immediate ordering
       })
       .then(() => {
-        console.log("Post created successfully.");
+        console.log("Post created successfully at timestamp:", timestamp);
         postInput.value = "";
         if (postButton) postButton.disabled = true;
 
@@ -564,7 +567,7 @@ function createPost() {
         }
 
         // Force refresh posts to ensure new post appears at the top
-        loadPosts();
+        // No need to call loadPosts() as the Firebase listener will trigger
       })
       .catch((error) => {
         console.error("Error creating post:", error);
@@ -921,7 +924,7 @@ function setupEventListeners() {
     // Add a single click listener to the new button
     newPostButton.addEventListener("click", function () {
       if (!this.disabled) {
-        createPost();
+        createPostFunc();
       }
     });
   }
@@ -1348,7 +1351,7 @@ function createCommentElement(comment, postId, depth = 0) {
 }
 
 // Update the showReplyInput function to include event listeners for the input
-function showReplyInput(postId, commentId, asOwner = false) {
+function showReplyInputFunc(postId, commentId, asOwner = false) {
   // First hide all other reply inputs
   document.querySelectorAll('.ursac-reply-input-container').forEach(container => {
     container.style.display = 'none';
@@ -1524,7 +1527,7 @@ function initializeCommentListeners() {
 }
 
 // Function to create a post
-function createPost() {
+function createPostFunc() {
   if (!currentUser) {
     alert("You must be logged in to post.");
     return;
@@ -1685,7 +1688,7 @@ window.toggleComments = toggleComments;
 window.sharePost = sharePost;
 window.clearMediaPreview = clearMediaPreview;
 window.handleCommentInput = handleCommentInput;
-window.showReplyInput = showReplyInput;
+window.showReplyInput = showReplyInputFunc;
 window.submitReply = submitReply;
 window.submitComment = function(postId) {
   const postCard = document.querySelector(`[data-post-id="${postId}"]`);
