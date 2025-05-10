@@ -28,7 +28,8 @@
   <div class="login-logo">
     <h1><span class="bold">URSAC</span> Hub</h1>
   </div>
-  
+
+  <div class = login-main-ctn>
   <div class="login-container">
     <div class="form-card">
       <h2>Welcome GIANT!</h2>
@@ -68,6 +69,10 @@
       </p>
     </div>
   </div>
+
+  </div>
+  
+
   
   <script>
     const form = document.getElementById('login-form');

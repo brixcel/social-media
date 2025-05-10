@@ -115,6 +115,19 @@ public function messages()
     return view('Auth.messages'); // Corrected the view name here
 }
 
+public function forums()
+{
+    // Example: load a view and pass forum data
+    return view('Auth.forums', [
+        'categories' => [
+            'Academic Discussions',
+            'Tech Corner',
+            'Announcements'
+        ]
+    ]);
+}
+
+
 
     public function login(Request $request)
     {
