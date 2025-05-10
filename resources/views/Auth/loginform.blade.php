@@ -23,58 +23,192 @@
     
     firebase.initializeApp(firebaseConfig);
   </script>
+  
 </head>
 <body>
   <div class="login-logo">
     <h1><span class="bold">URSAC</span> Hub</h1>
   </div>
 
-  <div class = login-main-ctn>
-  <div class="login-container">
-    <div class="form-card">
-      <h2>Welcome GIANT!</h2>
-      
-      <form id="login-form">
-        <div class="form-group" id="email-group">
-          <label class="form-label" for="email-student-id">Email / Student-ID</label>
-          <input type="text" class="form-control" id="email-student-id" required />
-        </div>
+  <div class="login-main-ctn">
+    <div class="login-container">
+      <div class="form-card">
+        <h2>Welcome GIANT!</h2>
         
-        <div class="form-group" id="password-group">
-          <label class="form-label" for="password">Password</label>
-          <input type="password" class="form-control" id="password" required />
-        </div>
-        
-        <div class="form-footer">
-          <a href="#" class="forgot-password">Forgot Password?</a>
-          <div class="remember-me">
-            <label for="remember-me">Save Login</label>
-            <input type="checkbox" id="remember-me" />
+        <form id="login-form">
+          <div class="form-group" id="email-group">
+            <label class="form-label" for="email-student-id">Email / Student-ID</label>
+            <input type="text" class="form-control" id="email-student-id" required />
           </div>
-        </div>
+          
+          <div class="form-group" id="password-group">
+            <label class="form-label" for="password">Password</label>
+            <input type="password" class="form-control" id="password" required />
+          </div>
+          
+          <div class="form-footer">
+            <a href="#" class="forgot-password">Forgot Password?</a>
+            <div class="remember-me">
+              <label for="remember-me">Save Login</label>
+              <input type="checkbox" id="remember-me" />
+            </div>
+          </div>
+          
+          <button type="submit" class="login-btn">Sign-In</button>
+        </form>
         
-        <button type="submit" class="login-btn">Sign-In</button>
-      </form>
-      
-      <div class="divider"></div>
-      
-      <button class="google-btn" id="google-signin">
-        <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google" class="google-icon">
-        Sign-In with Google
-      </button>
-      
-      <p class="register-text">
-        Don't have an account yet?<br>
-        <a href="#" class="register-link">REGISTER NOW!</a>
-      </p>
+        <div class="divider"></div>
+        
+        <button class="google-btn" id="google-signin">
+          <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google" class="google-icon">
+          Sign-In with Google
+        </button>
+        
+        <p class="register-text">
+          Don't have an account yet?<br>
+          <a href="#" class="register-link">REGISTER NOW!</a>
+        </p>
+      </div>
     </div>
   </div>
 
+  <!-- Modal Template -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Message</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="modal-message"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-confirm" class="modal-button">OK</button>
+      </div>
+    </div>
   </div>
   
-
+  <!-- Prompt Modal Template -->
+  <div id="prompt-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Enter Information</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="prompt-message"></p>
+        <input type="text" id="prompt-input" class="form-control" />
+      </div>
+      <div class="modal-footer">
+        <button id="prompt-cancel" class="modal-button secondary">Cancel</button>
+        <button id="prompt-confirm" class="modal-button">OK</button>
+      </div>
+    </div>
+  </div>
   
   <script>
+    // Modal functions
+    function showModal(message, title = "Message", type = "info", callback = null) {
+      const modal = document.getElementById('modal');
+      const modalTitle = document.querySelector('.modal-title');
+      const modalMessage = document.getElementById('modal-message');
+      const modalContent = document.querySelector('.modal-content');
+      const modalConfirm = document.getElementById('modal-confirm');
+      
+      // Reset modal classes
+      modalContent.classList.remove('modal-success', 'modal-error', 'modal-info');
+      
+      // Set modal content
+      modalTitle.textContent = title;
+      modalMessage.textContent = message;
+      
+      // Set modal type
+      if (type === 'success') {
+        modalContent.classList.add('modal-success');
+      } else if (type === 'error') {
+        modalContent.classList.add('modal-error');
+      } else {
+        modalContent.classList.add('modal-info');
+      }
+      
+      // Show modal
+      modal.style.display = 'flex';
+      
+      // Handle close button
+      document.querySelector('.modal-close').onclick = function() {
+        modal.style.display = 'none';
+        if (callback) callback(false);
+      };
+      
+      // Handle confirm button
+      modalConfirm.onclick = function() {
+        modal.style.display = 'none';
+        if (callback) callback(true);
+      };
+      
+      // Close when clicking outside
+      modal.onclick = function(event) {
+        if (event.target === modal) {
+          modal.style.display = 'none';
+          if (callback) callback(false);
+        }
+      };
+    }
+    
+    function showPromptModal(message, defaultValue = "", callback) {
+      const promptModal = document.getElementById('prompt-modal');
+      const promptMessage = document.getElementById('prompt-message');
+      const promptInput = document.getElementById('prompt-input');
+      const promptCancel = document.getElementById('prompt-cancel');
+      const promptConfirm = document.getElementById('prompt-confirm');
+      
+      // Set prompt content
+      promptMessage.textContent = message;
+      promptInput.value = defaultValue;
+      
+      // Show prompt
+      promptModal.style.display = 'flex';
+      promptInput.focus();
+      
+      // Handle close button
+      document.querySelectorAll('#prompt-modal .modal-close').forEach(btn => {
+        btn.onclick = function() {
+          promptModal.style.display = 'none';
+          callback(null);
+        };
+      });
+      
+      // Handle cancel button
+      promptCancel.onclick = function() {
+        promptModal.style.display = 'none';
+        callback(null);
+      };
+      
+      // Handle confirm button
+      promptConfirm.onclick = function() {
+        const value = promptInput.value.trim();
+        promptModal.style.display = 'none';
+        callback(value);
+      };
+      
+      // Close when clicking outside
+      promptModal.onclick = function(event) {
+        if (event.target === promptModal) {
+          promptModal.style.display = 'none';
+          callback(null);
+        }
+      };
+      
+      // Handle Enter key
+      promptInput.addEventListener('keyup', function(event) {
+        if (event.key === 'Enter') {
+          const value = promptInput.value.trim();
+          promptModal.style.display = 'none';
+          callback(value);
+        }
+      });
+    }
+    
     const form = document.getElementById('login-form');
     const emailGroup = document.getElementById('email-group');
     const passwordGroup = document.getElementById('password-group');
@@ -189,36 +323,48 @@
           }));
         }
         firebase.auth().currentUser.getIdToken(/* forceRefresh */ true).then(function(idToken) {
-  fetch('/firebase-session', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-    },
-    body: JSON.stringify({ idToken: idToken })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      // Now backend session is set, you can redirect
-      window.location.href = '/homepage';
-    } else {
-      alert('Session sync failed: ' + data.error);
-    }
-  });
-});
+          fetch('/firebase-session', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ idToken: idToken })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              // Now backend session is set, you can redirect
+              window.location.href = '/homepage';
+            } else {
+              showModal(
+                'Session sync failed: ' + data.error, 
+                'Error', 
+                'error'
+              );
+            }
+          });
+        });
         
-        alert('Login successful! Welcome, ' + (result.userData.firstName || 'User'));
-        if (result.userData && result.userData.role === 'admin') {
-          window.location.href = '/admin';
-        } else {
-          window.location.href = '/homepage';
-        }
-
-
+        showModal(
+          'Login successful! Welcome, ' + (result.userData.firstName || 'User'), 
+          'Success', 
+          'success',
+          () => {
+            if (result.userData && result.userData.role === 'admin') {
+              window.location.href = '/admin';
+            } else {
+              window.location.href = '/homepage';
+            }
+          }
+        );
       } else {
         console.error('Login failed:', result.error);
-        alert('Login failed: ' + result.error);
+        showModal(
+          'Login failed: ' + result.error, 
+          'Error', 
+          'error'
+        );
         showError(emailGroup, true);
         showError(passwordGroup, true);
       }
@@ -248,47 +394,71 @@
                   ...userData
                 }));
                 firebase.auth().currentUser.getIdToken(/* forceRefresh */ true).then(function(idToken) {
-  fetch('/firebase-session', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-    },
-    body: JSON.stringify({ idToken: idToken })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      // Now backend session is set, you can redirect
-      window.location.href = '/homepage';
-    } else {
-      alert('Session sync failed: ' + data.error);
-    }
-  });
-});
+                  fetch('/firebase-session', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({ idToken: idToken })
+                  })
+                  .then(response => response.json())
+                  .then(data => {
+                    if (data.success) {
+                      // Now backend session is set, you can redirect
+                      window.location.href = '/homepage';
+                    } else {
+                      showModal(
+                        'Session sync failed: ' + data.error, 
+                        'Error', 
+                        'error'
+                      );
+                    }
+                  });
+                });
 
-                alert('Google login successful! Welcome, ' + (userData.firstName || user.displayName || 'User'));
-                if (userData && userData.role === 'admin') {
-                  window.location.href = '/admin';
-                } else {
-                  window.location.href = '/homepage';
-                }
+                showModal(
+                  'Google login successful! Welcome, ' + (userData.firstName || user.displayName || 'User'), 
+                  'Success', 
+                  'success',
+                  () => {
+                    if (userData && userData.role === 'admin') {
+                      window.location.href = '/admin';
+                    } else {
+                      window.location.href = '/homepage';
+                    }
+                  }
+                );
               } else {
                 // User not registered in database
-                alert('Your Google account is not registered. Please register first.');
-                firebase.auth().signOut();
-                window.location.href = '/register';
+                showModal(
+                  'Your Google account is not registered. Please register first.', 
+                  'Registration Required', 
+                  'info',
+                  () => {
+                    firebase.auth().signOut();
+                    window.location.href = '/register';
+                  }
+                );
               }
             })
             .catch((error) => {
               console.error('Database error:', error);
-              alert('An error occurred while checking registration: ' + error.message);
+              showModal(
+                'An error occurred while checking registration: ' + error.message, 
+                'Error', 
+                'error'
+              );
               firebase.auth().signOut();
             });
         })
         .catch((error) => {
           console.error('Google sign-in error', error);
-          alert('Google sign-in failed: ' + error.message);
+          showModal(
+            'Google sign-in failed: ' + error.message, 
+            'Error', 
+            'error'
+          );
         });
     });
     
@@ -299,18 +469,27 @@
     
     document.querySelector('.forgot-password').addEventListener('click', (e) => {
       e.preventDefault();
-      const email = prompt("Please enter your email address to reset your password:");
       
-      if (email) {
-        firebase.auth().sendPasswordResetEmail(email)
-          .then(() => {
-            alert("Password reset email sent. Please check your inbox.");
-          })
-          .catch((error) => {
-            console.error("Error sending password reset:", error);
-            alert("Error: " + error.message);
-          });
-      }
+      showPromptModal("Please enter your email address to reset your password:", "", function(email) {
+        if (email) {
+          firebase.auth().sendPasswordResetEmail(email)
+            .then(() => {
+              showModal(
+                "Password reset email sent. Please check your inbox.", 
+                "Password Reset", 
+                "success"
+              );
+            })
+            .catch((error) => {
+              console.error("Error sending password reset:", error);
+              showModal(
+                "Error: " + error.message, 
+                "Password Reset Failed", 
+                "error"
+              );
+            });
+        }
+      });
     });
   </script>
 </body>

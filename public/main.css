@@ -475,6 +475,90 @@ body {
     width: 100%;
     margin-bottom: 15px;
 }
+/* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .modal-content {
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      position: relative;
+      font-family: 'Poppins', sans-serif;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .modal-title {
+      font-weight: 600;
+      font-size: 1.2rem;
+      margin: 0;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+    }
+    
+    .modal-body {
+      margin-bottom: 20px;
+    }
+    
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+    }
+    
+    .modal-button {
+      background-color: #4361ee;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+    }
+    
+    .modal-button.secondary {
+      background-color: #e0e0e0;
+      color: #333;
+      margin-right: 10px;
+    }
+    
+    .modal-success .modal-header {
+      color: #28a745;
+    }
+    
+    .modal-error .modal-header {
+      color: #dc3545;
+    }
+    
+    .modal-info .modal-header {
+      color: #17a2b8;
+    }
 
 .register-link {
     color: var(--main-color);
