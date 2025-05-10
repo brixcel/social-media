@@ -141,39 +141,51 @@ class PostController extends Controller
     }
     public function edit($id)
     {
-        $post = $this->database->getReference($this->tablename . '/' . $id)->getValue();
-        
-        if (!$post) {
-            return redirect()->route('admin.posts.index')->with('error', 'Post not found');
+        try {
+            // Get the post data
+            $postRef = $this->database->getReference("posts/{$id}");
+            $post = $postRef->getValue();
+
+            if (!$post) {
+                return redirect()->route('admin.posts')->with('error', 'Post not found');
+            }
+
+            // Add the post ID to the data
+            $post['id'] = $id;
+
+            return view('admin.posts.edit', compact('post'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.posts')->with('error', 'Error loading post: ' . $e->getMessage());
         }
-        
-        return view('admin.posts.edit', compact('post', 'id'));
     }
 
     public function update(Request $request, $id)
     {
-        $validatedData = $request->validate([
-            'content' => 'required|string',
-            'mediaURL' => 'nullable|url',
-            'mediaType' => 'nullable|string',
-        ]);
+        try {
+            $validatedData = $request->validate([
+                'content' => 'required|string',
+                'mediaURL' => 'nullable|url',
+                'mediaType' => 'nullable|string'
+            ]);
 
-        $updatedPost = [
-            'content' => $validatedData['content'],
-        ];
-        
-        // Only update media fields if provided
-        if (!empty($validatedData['mediaURL'])) {
-            $updatedPost['mediaURL'] = $validatedData['mediaURL'];
+            // Prepare update data
+            $updates = [
+                'content' => $validatedData['content'],
+                'lastEdited' => time()
+            ];
+
+            if (isset($validatedData['mediaURL'])) {
+                $updates['mediaURL'] = $validatedData['mediaURL'];
+                $updates['mediaType'] = $validatedData['mediaType'];
+            }
+
+            // Update the post
+            $this->database->getReference("posts/{$id}")->update($updates);
+
+            return redirect()->route('admin.posts')->with('success', 'Post updated successfully');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error updating post: ' . $e->getMessage());
         }
-        
-        if (!empty($validatedData['mediaType'])) {
-            $updatedPost['mediaType'] = $validatedData['mediaType'];
-        }
-
-        $this->database->getReference($this->tablename . '/' . $id)->update($updatedPost);
-
-        return redirect()->route('admin.posts.index')->with('success', 'Post updated successfully!');
     }
 
     public function destroy($id)

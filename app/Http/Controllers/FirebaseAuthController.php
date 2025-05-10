@@ -35,6 +35,10 @@ class FirebaseAuthController extends Controller
     {
         return view('Auth.homepage');
     }
+    public function AdminRegistration()
+    {
+        return view('Auth.AdminRegistration');
+    }
     public function register(Request $request)
 {
     $request->validate([
