@@ -35,6 +35,10 @@ class FirebaseAuthController extends Controller
     {
         return view('Auth.homepage');
     }
+    public function AdminRegistration()
+    {
+        return view('Auth.AdminRegistration');
+    }
     public function register(Request $request)
 {
     $request->validate([
@@ -110,6 +114,19 @@ public function messages()
     // Just return the messages Blade view.
     return view('Auth.messages'); // Corrected the view name here
 }
+
+public function forums()
+{
+    // Example: load a view and pass forum data
+    return view('Auth.forums', [
+        'categories' => [
+            'Academic Discussions',
+            'Tech Corner',
+            'Announcements'
+        ]
+    ]);
+}
+
 
 
     public function login(Request $request)

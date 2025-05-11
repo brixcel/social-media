@@ -15,8 +15,7 @@
             <nav>
                 <a href="{{ route('admin.dashboard') }}" class="block py-2 px-4 rounded hover:bg-gray-700 mb-1">Dashboard</a>
                 <a href="{{ route('admin.posts') }}" class="block py-2 px-4 rounded hover:bg-gray-700 mb-1">Posts</a>
-                <a href="{{ route('admin.pages') }}" class="block py-2 px-4 rounded hover:bg-gray-700 mb-1">Pages</a>
-                <a href="#" class="block py-2 px-4 rounded hover:bg-gray-700 mb-1">Users</a>
+                <a href="{{ route('admin.users.index') }}" class="block py-2 px-4 rounded hover:bg-gray-700 mb-1">Users</a>
                 <a href="#" class="block py-2 px-4 rounded hover:bg-gray-700 mb-1">Settings</a>
                 <form method="POST" action="{{ route('logout') }}" class="mt-8">
                     @csrf
