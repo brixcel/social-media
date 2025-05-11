@@ -323,7 +323,16 @@
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
 
+      document.addEventListener('click', function (e) {
+    const profileBtn = document.getElementById('user-profile-btn');
+    const dropdown = document.getElementById('user-profile-dropdown');
     
+    if (profileBtn.contains(e.target)) {
+      dropdown.classList.toggle('show');
+    } else if (!dropdown.contains(e.target)) {
+      dropdown.classList.remove('show');
+    }
+  });
   </script>
   <script src="script.js"></script>
   <script src="notifications.js"></script>
