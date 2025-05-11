@@ -1,44 +1,69 @@
 /* Messages specific styles */
+:root {
+  --main-blue: #0078ff;
+  --light-blue: #e7f3ff;
+  --dark-blue: #0056b3;
+  --white: #ffffff;
+  --light-gray: #f5f5f5;
+  --medium-gray: #e4e6eb;
+  --dark-gray: #65676b;
+  --text-dark: #1a1a1a;
+  --online-green: #42b72a;
+  --offline-gray: #65676b;
+}
+
 .ursac-messages-container {
   display: flex;
   background-color: var(--white);
-  border-radius: 0;
+  border-radius: 8px;
   overflow: hidden;
   height: calc(100vh - 120px);
-  box-shadow: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* Conversations List */
 .ursac-conversations-list {
   width: 300px;
-  border-right: 1px solid #e4e6eb;
+  border-right: 1px solid var(--medium-gray);
   overflow-y: auto;
-  background-color: white;
+  background-color: var(--white);
+  display: flex;
+  flex-direction: column;
+}
+
+.ursac-new-conversation-button {
+  padding: 15px;
+  border-bottom: 1px solid var(--medium-gray);
+}
+
+.ursac-new-conversation-button .ursac-new-message-btn {
+  width: 100%;
+  text-align: center;
 }
 
 .ursac-conversation-item {
   display: flex;
   padding: 15px;
-  border-bottom: 1px solid #f0f2f5;
+  border-bottom: 1px solid var(--medium-gray);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .ursac-conversation-item:hover {
-  background-color: #f5f7fa;
+  background-color: var(--light-gray);
 }
 
 .ursac-conversation-item.active {
-  background-color: #e7f3ff;
-  border-left: 3px solid var(--main-color);
+  background-color: var(--light-blue);
+  border-left: 3px solid var(--main-blue);
 }
 
 .ursac-conversation-avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: var(--main-color);
-  color: white;
+  background-color: var(--main-blue);
+  color: var(--white);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -54,15 +79,15 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 2px solid white;
+  border: 2px solid var(--white);
 }
 
 .ursac-status-online {
-  background-color: #42b72a;
+  background-color: var(--online-green);
 }
 
 .ursac-status-offline {
-  background-color: #65676b;
+  background-color: var(--offline-gray);
 }
 
 .ursac-conversation-info {
@@ -73,7 +98,7 @@
 .ursac-conversation-name {
   font-weight: 600;
   font-size: 15px;
-  color: #1a1a1a;
+  color: var(--text-dark);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -81,7 +106,7 @@
 
 .ursac-conversation-message {
   font-size: 13px;
-  color: #65676b;
+  color: var(--dark-gray);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -90,7 +115,7 @@
 
 .ursac-conversation-unread {
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-dark);
 }
 
 .ursac-conversation-unread-badge {
@@ -99,8 +124,8 @@
   justify-content: center;
   min-width: 18px;
   height: 18px;
-  background-color: var(--main-color);
-  color: white;
+  background-color: var(--main-blue);
+  color: var(--white);
   border-radius: 50%;
   font-size: 11px;
   font-weight: 600;
@@ -113,7 +138,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: white;
+  background-color: var(--white);
 }
 
 .ursac-conversation-default {
@@ -123,7 +148,7 @@
   justify-content: center;
   height: 100%;
   text-align: center;
-  color: #65676b;
+  color: var(--dark-gray);
 }
 
 .ursac-conversation-default-content {
@@ -132,7 +157,7 @@
 
 .ursac-conversation-default i {
   font-size: 48px;
-  color: var(--main-color);
+  color: var(--main-blue);
   margin-bottom: 15px;
 }
 
@@ -140,7 +165,7 @@
   font-size: 20px;
   font-weight: 600;
   margin-bottom: 10px;
-  color: #1a1a1a;
+  color: var(--text-dark);
 }
 
 .ursac-conversation-default p {
@@ -148,8 +173,8 @@
 }
 
 .ursac-new-message-btn {
-  background-color: var(--main-color);
-  color: white;
+  background-color: var(--main-blue);
+  color: var(--white);
   border: none;
   border-radius: 5px;
   padding: 10px 15px;
@@ -159,7 +184,7 @@
 }
 
 .ursac-new-message-btn:hover {
-  background-color: var(--main-color-drk);
+  background-color: var(--dark-blue);
 }
 
 .ursac-conversation-header {
@@ -167,8 +192,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 15px;
-  border-bottom: 1px solid #e4e6eb;
-  background-color: white;
+  border-bottom: 1px solid var(--medium-gray);
+  background-color: var(--white);
 }
 
 .ursac-conversation-user {
@@ -182,7 +207,7 @@
 
 .ursac-conversation-status {
   font-size: 12px;
-  color: #65676b;
+  color: var(--dark-gray);
 }
 
 .ursac-conversation-actions {
@@ -193,7 +218,7 @@
 .ursac-conversation-action {
   background: none;
   border: none;
-  color: #65676b;
+  color: var(--dark-gray);
   font-size: 16px;
   cursor: pointer;
   width: 36px;
@@ -206,8 +231,8 @@
 }
 
 .ursac-conversation-action:hover {
-  background-color: #f0f2f5;
-  color: var(--main-color);
+  background-color: var(--light-gray);
+  color: var(--main-blue);
 }
 
 /* Messages Area */
@@ -217,13 +242,14 @@
   padding: 10px 15px;
   display: flex;
   flex-direction: column;
+  background-color: var(--white);
 }
 
 .ursac-message-date {
   text-align: center;
   margin: 10px 0;
   font-size: 12px;
-  color: #65676b;
+  color: var(--dark-gray);
   position: relative;
 }
 
@@ -234,7 +260,7 @@
   top: 50%;
   width: 30%;
   height: 1px;
-  background-color: #e4e6eb;
+  background-color: var(--medium-gray);
 }
 
 .ursac-message-date:before {
@@ -255,17 +281,20 @@
   align-self: flex-start;
 }
 
+/* Update the sent message positioning to be all the way to the right */
 .ursac-message-sent {
   align-self: flex-end;
   flex-direction: row-reverse;
+  margin-left: auto; /* Push to the right */
+  margin-right: 5px; /* Small margin from the scroll bar */
 }
 
 .ursac-message-avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: var(--main-color);
-  color: white;
+  background-color: var(--main-blue);
+  color: var(--white);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -293,28 +322,30 @@
 }
 
 .ursac-message-received .ursac-message-bubble {
-  background-color: #f0f2f5;
-  color: #1a1a1a;
+  background-color: var(--light-gray);
+  color: var(--text-dark);
   border-radius: 18px;
   border-bottom-left-radius: 4px;
 }
 
+/* Ensure the message bubble takes up appropriate space */
 .ursac-message-sent .ursac-message-bubble {
-  background-color: var(--main-color);
-  color: white;
+  background-color: var(--main-blue);
+  color: var(--white);
   border-radius: 18px;
   border-bottom-right-radius: 4px;
+  text-align: right; /* Align text to the right */
 }
 
 .ursac-message-time {
   font-size: 11px;
-  color: #65676b;
+  color: var(--dark-gray);
   margin-top: 2px;
-  align-self: flex-end;
 }
 
 .ursac-message-sent .ursac-message-time {
   align-self: flex-end;
+  text-align: right;
 }
 
 .ursac-message-received .ursac-message-time {
@@ -326,15 +357,15 @@
   display: flex;
   align-items: center;
   padding: 10px 15px;
-  background-color: white;
-  border-top: 1px solid #e4e6eb;
+  background-color: var(--white);
+  border-top: 1px solid var(--medium-gray);
 }
 
 .ursac-message-attachment-btn,
 .ursac-message-media-btn {
   background: none;
   border: none;
-  color: #65676b;
+  color: var(--dark-gray);
   font-size: 18px;
   cursor: pointer;
   width: 40px;
@@ -348,14 +379,14 @@
 
 .ursac-message-attachment-btn:hover,
 .ursac-message-media-btn:hover {
-  background-color: #f0f2f5;
-  color: var(--main-color);
+  background-color: var(--light-gray);
+  color: var(--main-blue);
 }
 
 .ursac-message-input {
   flex: 1;
   border: none;
-  background-color: #f0f2f5;
+  background-color: var(--light-gray);
   border-radius: 20px;
   padding: 10px 15px;
   margin: 0 10px;
@@ -368,8 +399,8 @@
 }
 
 .ursac-message-send-btn {
-  background-color: var(--main-color);
-  color: white;
+  background-color: var(--main-blue);
+  color: var(--white);
   border: none;
   width: 40px;
   height: 40px;
@@ -382,11 +413,11 @@
 }
 
 .ursac-message-send-btn:hover:not(:disabled) {
-  background-color: var(--main-color-drk);
+  background-color: var(--dark-blue);
 }
 
 .ursac-message-send-btn:disabled {
-  background-color: #e4e6eb;
+  background-color: var(--medium-gray);
   color: #bec3c9;
   cursor: not-allowed;
 }
@@ -401,14 +432,14 @@
   height: 100%;
   padding: 20px;
   text-align: center;
-  color: #65676b;
+  color: var(--dark-gray);
 }
 
 .ursac-loading-state i,
 .ursac-empty-state i {
   font-size: 32px;
   margin-bottom: 10px;
-  color: var(--main-color);
+  color: var(--main-blue);
 }
 
 /* New Message Modal */
@@ -426,7 +457,7 @@
 }
 
 .ursac-modal-content {
-  background-color: white;
+  background-color: var(--white);
   border-radius: 8px;
   width: 90%;
   max-width: 500px;
@@ -440,7 +471,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 15px;
-  border-bottom: 1px solid #e4e6eb;
+  border-bottom: 1px solid var(--medium-gray);
 }
 
 .ursac-modal-header h3 {
@@ -454,7 +485,7 @@
   border: none;
   font-size: 18px;
   cursor: pointer;
-  color: #65676b;
+  color: var(--dark-gray);
 }
 
 .ursac-modal-body {
@@ -475,7 +506,7 @@
 .ursac-form-group textarea {
   width: 100%;
   padding: 10px;
-  border: 1px solid #e4e6eb;
+  border: 1px solid var(--medium-gray);
   border-radius: 5px;
   font-size: 14px;
 }
@@ -501,19 +532,19 @@
 }
 
 .ursac-recipient-item:hover {
-  background-color: #f0f2f5;
+  background-color: var(--light-gray);
 }
 
 .ursac-recipient-item.selected {
-  background-color: #e7f3ff;
+  background-color: var(--light-blue);
 }
 
 .ursac-recipient-avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: var(--main-color);
-  color: white;
+  background-color: var(--main-blue);
+  color: var(--white);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -534,7 +565,7 @@
   display: flex;
   justify-content: flex-end;
   padding: 15px;
-  border-top: 1px solid #e4e6eb;
+  border-top: 1px solid var(--medium-gray);
   gap: 10px;
 }
 
@@ -547,18 +578,18 @@
 }
 
 .ursac-button-primary {
-  background-color: var(--main-color);
-  color: white;
+  background-color: var(--main-blue);
+  color: var(--white);
   border: none;
 }
 
 .ursac-button-primary:hover {
-  background-color: var(--main-color-drk);
+  background-color: var(--dark-blue);
 }
 
 .ursac-button-secondary {
-  background-color: #e4e6eb;
-  color: #1a1a1a;
+  background-color: var(--medium-gray);
+  color: var(--text-dark);
   border: none;
 }
 
@@ -568,16 +599,16 @@
 
 /* Fix for the sidebar */
 .ursac-sidebar-left {
-  background: var(--bg-gradient);
+  background: var(--main-blue);
 }
 
 .ursac-sidebar-right {
-  background: var(--bg-gradient);
+  background: var(--main-blue);
 }
 
 .ursac-menu-active {
   background-color: var(--white);
-  color: var(--main-color);
+  color: var(--main-blue);
   padding: 25px 30px;
 }
 
@@ -596,17 +627,24 @@
 }
 
 .ursac-upload-content {
-  background-color: white;
+  background-color: var(--white);
   padding: 20px;
   border-radius: 10px;
   width: 300px;
   text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.ursac-upload-content h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: var(--text-dark);
 }
 
 .ursac-progress-container {
   width: 100%;
   height: 10px;
-  background-color: #f0f2f5;
+  background-color: var(--light-gray);
   border-radius: 5px;
   margin: 15px 0;
   overflow: hidden;
@@ -614,7 +652,7 @@
 
 .ursac-progress-bar {
   height: 100%;
-  background-color: var(--main-color);
+  background-color: var(--main-blue);
   width: 0;
   transition: width 0.3s;
 }
@@ -622,6 +660,241 @@
 .ursac-upload-status {
   font-size: 14px;
   font-weight: 500;
+  color: var(--text-dark);
+}
+
+/* Update the profile dropdown styling to ensure it appears correctly */
+.ursac-profile-dropdown {
+  display: none;
+  position: absolute;
+  top: auto;
+  bottom: 60px;
+  right: 0;
+  left: auto;
+  width: 240px;
+  background: #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  z-index: 100;
+  padding: 8px 0;
+}
+
+/* Remove the animation that might be causing positioning issues */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fix the header profile button positioning */
+.ursac-header-profile {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background-color: var(--white);
+  border-radius: 8px;
+  margin-top: 15px;
+  cursor: pointer;
+  position: relative;
+  width: 100%;
+}
+
+/* Ensure the dropdown items are styled correctly */
+.ursac-profile-dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  color: var(--text-dark);
+}
+
+.ursac-profile-dropdown-item:hover {
+  background-color: var(--light-gray);
+}
+
+/* Style the logout button to match the design */
+#logout-btn {
+  color: #dc3545;
+}
+
+#logout-btn i {
+  color: #dc3545;
+  margin-right: 12px;
+}
+
+/* Style the add account button to match the design */
+#add-account-btn i {
+  margin-right: 12px;
+  color: var(--dark-gray);
+}
+
+/* Support both display:block and .show class */
+.ursac-profile-dropdown.show {
+  display: block;
+}
+
+/* Support both display:block and .show class */
+.ursac-profile-dropdown.show,
+.ursac-profile-dropdown[style*="display: block"] {
+  display: block;
+}
+
+.ursac-profile-dropdown.show {
+  display: block;
+}
+
+.ursac-profile-dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-radius: 8px;
+  color: var(--text-dark);
+}
+
+.ursac-profile-dropdown-item:hover {
+  background-color: var(--light-gray);
+}
+
+.ursac-profile-dropdown-item i {
+  margin-right: 12px;
+  font-size: 16px;
+  color: var(--dark-gray);
+  width: 20px;
+  text-align: center;
+}
+
+.ursac-profile-dropdown-divider {
+  height: 1px;
+  background-color: var(--medium-gray);
+  margin: 4px 0;
+}
+
+.ursac-profile-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--main-blue);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  margin-right: 10px;
+}
+
+.ursac-profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ursac-profile-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ursac-profile-email {
+  font-size: 12px;
+  color: var(--dark-gray);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Add styles for file uploads and drag-and-drop */
+.ursac-highlight-drop {
+  background-color: rgba(0, 120, 255, 0.05);
+  border: 2px dashed var(--main-blue);
+}
+
+.ursac-message-image {
+  max-width: 250px;
+  max-height: 250px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  display: block;
+  margin-top: 5px;
+}
+
+.ursac-message-image:hover {
+  transform: scale(1.02);
+}
+
+.ursac-message-video {
+  max-width: 250px;
+  max-height: 250px;
+  border-radius: 8px;
+  display: block;
+  margin-top: 5px;
+}
+
+/* Improve message file attachment styling */
+.ursac-message-file {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  margin-top: 5px;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.2s;
+}
+
+.ursac-message-file:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.ursac-message-sent .ursac-message-file {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.ursac-message-sent .ursac-message-file:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+.ursac-message-file i {
+  font-size: 24px;
+  margin-right: 10px;
+  color: var(--dark-gray);
+}
+
+.ursac-message-sent .ursac-message-file i {
+  color: var(--white);
+}
+
+.ursac-message-file-info {
+  flex: 1;
+}
+
+.ursac-message-file-name {
+  font-weight: 500;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.ursac-message-file-size {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.ursac-message-sent .ursac-message-file-size {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* Media Queries */
@@ -635,7 +908,7 @@
     width: 100%;
     height: 30%;
     border-right: none;
-    border-bottom: 1px solid #e4e6eb;
+    border-bottom: 1px solid var(--medium-gray);
   }
 
   .ursac-conversation-view {
@@ -644,5 +917,15 @@
 
   .ursac-message {
     max-width: 85%;
+  }
+
+  /* Fix for mobile positioning */
+  .ursac-profile-dropdown {
+    position: fixed;
+    top: auto;
+    bottom: 70px;
+    right: 10px;
+    left: auto;
+    width: 240px;
   }
 }
