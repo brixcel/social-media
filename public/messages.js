@@ -4,6 +4,141 @@ document.addEventListener("DOMContentLoaded", () => {
   const database = firebase.database()
   const storage = firebase.storage()
 
+  // Profanity Filter - List of prohibited words (Filipino and English)
+  const prohibitedWords = [
+    // Filipino bad words
+    "bobo",
+    "tanga",
+    "gago",
+    "inutil",
+    "putangina",
+    "punyeta",
+    "ulol",
+    "tarantado",
+    "buwisit",
+    "lintik",
+    "kupal",
+    "gunggong",
+    "hinayupak",
+    "hayop",
+    "engot",
+    "ungas",
+    "pokpok",
+    "puta",
+    "leche",
+    "burat",
+    "tite",
+    "pekpek",
+    "bilat",
+    "kantot",
+    "iyot",
+
+    // English bad words
+    "stupid",
+    "idiot",
+    "dumb",
+    "moron",
+    "fool",
+    "imbecile",
+    "retard",
+    "asshole",
+    "bitch",
+    "bastard",
+    "damn",
+    "shit",
+    "fuck",
+    "cunt",
+    "dick",
+    "pussy",
+    "whore",
+  ]
+
+  // Profanity Filter - Check if text contains prohibited words
+  function checkForProfanity(text) {
+    if (!text || typeof text !== "string") {
+      return { isProfane: false, matches: [] }
+    }
+
+    // Convert to lowercase for case-insensitive matching
+    const lowerText = text.toLowerCase()
+
+    // Find all matches
+    const matches = []
+
+    for (const word of prohibitedWords) {
+      // Use regex to match whole words and embedded words
+      const regex = new RegExp(`${word}`, "gi")
+      const found = lowerText.match(regex)
+
+      if (found) {
+        matches.push(...found)
+      }
+    }
+
+    return {
+      isProfane: matches.length > 0,
+      matches: [...new Set(matches)], // Remove duplicates
+    }
+  }
+
+  // Profanity Filter - Show warning modal
+  function showProfanityWarning(matches) {
+    // Create modal if it doesn't exist
+    let modalElement = document.getElementById("profanity-warning-modal")
+
+    if (!modalElement) {
+      const modalHTML = `
+        <div class="ursac-modal" id="profanity-warning-modal">
+          <div class="ursac-modal-content">
+            <div class="ursac-modal-header">
+              <h3>Inappropriate Language Detected</h3>
+              <button class="ursac-modal-close" id="close-profanity-modal">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div class="ursac-modal-body">
+              <p>Your message contains inappropriate language that violates our community guidelines.</p>
+              <p>Please revise your message before sending.</p>
+              <div id="profanity-details" class="ursac-profanity-details" style="margin-top: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 5px; border-left: 3px solid #dc3545;"></div>
+            </div>
+            <div class="ursac-modal-footer">
+              <button class="ursac-button ursac-button-primary" id="acknowledge-profanity">I Understand</button>
+            </div>
+          </div>
+        </div>
+      `
+
+      const modalContainer = document.createElement("div")
+      modalContainer.innerHTML = modalHTML
+      document.body.appendChild(modalContainer.firstElementChild)
+
+      modalElement = document.getElementById("profanity-warning-modal")
+
+      // Add event listeners
+      document.getElementById("close-profanity-modal").addEventListener("click", () => {
+        modalElement.style.display = "none"
+      })
+
+      document.getElementById("acknowledge-profanity").addEventListener("click", () => {
+        modalElement.style.display = "none"
+      })
+    }
+
+    // Update details
+    const detailsElement = document.getElementById("profanity-details")
+    if (detailsElement && matches && matches.length > 0) {
+      detailsElement.innerHTML = `
+        <p>Detected inappropriate words:</p>
+        <ul style="margin: 5px 0 0 20px; padding: 0;">
+          ${matches.map((word) => `<li style="color: #dc3545; font-weight: bold;">${word}</li>`).join("")}
+        </ul>
+      `
+    }
+
+    // Show modal
+    modalElement.style.display = "flex"
+  }
+
   // DOM Elements
   const conversationsList = document.getElementById("conversations-list")
   const conversationView = document.getElementById("conversation-view")
@@ -598,6 +733,15 @@ document.addEventListener("DOMContentLoaded", () => {
       return
     }
 
+    // Check for profanity before sending
+    if (text) {
+      const profanityResult = checkForProfanity(text)
+      if (profanityResult.isProfane) {
+        showProfanityWarning(profanityResult.matches)
+        return
+      }
+    }
+
     // Disable send button while sending
     messageSendBtn.disabled = true
 
@@ -712,7 +856,7 @@ document.addEventListener("DOMContentLoaded", () => {
           })
 
         // Create notification for the recipient
-        createMessageNotification(selectedRecipientId, text, currentConversation)
+        createMessageNotification(selectedRecipientId, text, currentConversation, messageId)
       })
       .catch((error) => {
         console.error("Error creating message:", error)
@@ -721,7 +865,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Create a notification for a new message
-  function createMessageNotification(recipientId, messageText, conversationId) {
+  function createMessageNotification(recipientId, messageText, conversationId, messageId) {
     if (!recipientId || !currentUser) return
 
     getUserData(currentUser.uid)
@@ -735,6 +879,7 @@ document.addEventListener("DOMContentLoaded", () => {
           type: "message",
           userId: currentUser.uid,
           conversationId: conversationId,
+          messageId: messageId, // Store the specific message ID
           timestamp: firebase.database.ServerValue.TIMESTAMP,
           read: false,
           commentText: messageText, // Using commentText field for message preview
@@ -761,6 +906,16 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!recipientId) {
         reject(new Error("No recipient selected"))
         return
+      }
+
+      // Check for profanity in initial message
+      if (initialMessage && initialMessage.trim() !== "") {
+        const profanityResult = checkForProfanity(initialMessage)
+        if (profanityResult.isProfane) {
+          showProfanityWarning(profanityResult.matches)
+          reject(new Error("Message contains inappropriate language"))
+          return
+        }
       }
 
       console.log("Creating conversation with recipient:", recipientId)
@@ -806,7 +961,8 @@ document.addEventListener("DOMContentLoaded", () => {
               })
               .then(() => {
                 // Create notification for the recipient
-                createMessageNotification(recipientId, initialMessage, existingConversation.id)
+                const messageId = messageRef.key
+                createMessageNotification(recipientId, initialMessage, existingConversation.id, messageId)
                 resolve(existingConversation.id)
               })
               .catch((error) => {
@@ -881,7 +1037,8 @@ document.addEventListener("DOMContentLoaded", () => {
                       .update(updates)
                       .then(() => {
                         // Create notification for the recipient
-                        createMessageNotification(recipientId, initialMessage, conversationId)
+                        const messageId = messageRef.key
+                        createMessageNotification(recipientId, initialMessage, conversationId, messageId)
                         return conversationId
                       })
                   })
@@ -1593,6 +1750,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
     return groups
   }
+
+  // Function to open a conversation from a notification
+  function openConversationFromNotification(conversationId, userId, messageId) {
+    if (!conversationId || !userId) {
+      console.error("Missing conversation or user ID for opening from notification")
+      return
+    }
+
+    // Select the conversation
+    selectConversation(conversationId, userId)
+
+    // If we have a specific message ID, scroll to it after a short delay to ensure messages are loaded
+    if (messageId) {
+      setTimeout(() => {
+        const messageElement = document.querySelector(`.ursac-message[data-message-id="${messageId}"]`)
+        if (messageElement) {
+          messageElement.scrollIntoView({ behavior: "smooth", block: "center" })
+          // Highlight the message briefly
+          messageElement.classList.add("ursac-message-highlight")
+          setTimeout(() => {
+            messageElement.classList.remove("ursac-message-highlight")
+          }, 2000)
+        }
+      }, 500)
+    }
+  }
+
+  // Add this function to the global scope so it can be called from notifications.js
+  window.openConversationFromNotification = openConversationFromNotification
 
   // Initialize the app
   init()

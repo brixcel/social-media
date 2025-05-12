@@ -1,25 +1,37 @@
-document.addEventListener("DOMContentLoaded", function () {
-  // Assuming firebase is available globally or imported elsewhere.
-  // If not, you'll need to import it:
-  // import * as firebase from 'firebase/app';
-  // import 'firebase/auth';
-  // import 'firebase/database';
+document.addEventListener("DOMContentLoaded", () => {
+  // Firebase references
+  const firebase = window.firebase
+  const database = firebase.database()
 
-  const notificationsFeed = document.getElementById("notifications-feed");
-  const markAllReadBtn = document.getElementById("mark-all-read");
-  const filterOptions = document.querySelectorAll(".ursac-filter-option");
-  let currentFilter = "all";
-  let allNotifications = [];
-  let currentUser = null;
-  let userDataCache = {}; // Cache for user data to avoid repeated fetches
-  
+  // DOM Elements
+  const notificationsFeed = document.getElementById("notifications-feed")
+  const markAllReadBtn = document.getElementById("mark-all-read")
+  const filterOptions = document.querySelectorAll(".ursac-filter-option")
+  const notificationBadge = document.querySelector(".ursac-notification-badge")
+  const notificationIndicator = document.querySelector(".ursac-notification-indicator")
+
+  // Variables
+  let currentFilter = "all"
+  let allNotifications = []
+  let currentUser = null
+  const userDataCache = {} // Cache for user data to avoid repeated fetches
+
   // Function to load notifications
   function loadNotifications() {
-    firebase.auth().onAuthStateChanged(function(user) {
+    firebase.auth().onAuthStateChanged((user) => {
       if (user) {
-        currentUser = user;
-        setupNotificationListener(user.uid);
+        currentUser = user
+        console.log("Notifications: Authenticated as:", user.email)
+        setupNotificationListener(user.uid)
       } else {
+        console.log("Notifications: No user authenticated")
+        // For testing purposes only (remove in production):
+        currentUser = {
+          uid: "mockuser123",
+          email: "test@example.com",
+          displayName: "Test User",
+        }
+
         if (notificationsFeed) {
           notificationsFeed.innerHTML = `
             <div class="ursac-notification-item">
@@ -29,171 +41,206 @@ document.addEventListener("DOMContentLoaded", function () {
                 </div>
               </div>
             </div>
-          `;
+          `
         }
       }
-    });
+    })
   }
 
   function setupNotificationListener(userId) {
-    if (!userId) return;
+    if (!userId) return
 
-    const notificationsRef = firebase.database().ref(`notifications/${userId}`);
+    const notificationsRef = database.ref(`notifications/${userId}`)
 
-    notificationsRef.on('value', function(snapshot) {
-      let unreadCount = 0;
-      allNotifications = [];
-      
+    notificationsRef.on("value", (snapshot) => {
+      let unreadCount = 0
+      allNotifications = []
+
       if (snapshot && snapshot.exists()) {
-        snapshot.forEach(notifSnapshot => {
-          const notification = notifSnapshot.val();
-          if (!notification.read) unreadCount++;
-          
+        snapshot.forEach((notifSnapshot) => {
+          const notification = notifSnapshot.val()
+          if (!notification.read) unreadCount++
+
           // Add to the notifications array for UI rendering
           allNotifications.push({
             id: notifSnapshot.key,
-            ...notification
-          });
-        });
-        
+            ...notification,
+          })
+        })
+
         // Sort notifications by timestamp (newest first)
-        allNotifications.sort((a, b) => b.timestamp - a.timestamp);
-        
+        allNotifications.sort((a, b) => b.timestamp - a.timestamp)
+
         // Update UI based on current filter
-        filterNotifications(currentFilter);
+        filterNotifications(currentFilter)
       } else {
-        showEmptyState();
+        showEmptyState()
       }
-      
-      updateNotificationBadge(unreadCount);
-    });
+
+      updateNotificationBadge(unreadCount)
+    })
   }
 
   function filterNotifications(filter) {
-    currentFilter = filter;
-    
+    currentFilter = filter
+
     if (allNotifications.length === 0) {
-      showEmptyState();
-      return;
+      showEmptyState()
+      return
     }
-    
-    let filteredNotifications;
-    
-    switch(filter) {
+
+    let filteredNotifications
+
+    switch (filter) {
       case "unread":
-        filteredNotifications = allNotifications.filter(notif => !notif.read);
-        break;
+        filteredNotifications = allNotifications.filter((notif) => !notif.read)
+        break
       case "mentions":
-        filteredNotifications = allNotifications.filter(notif => 
-          notif.type === "comment" && notif.commentText && 
-          notif.commentText.includes(`@${currentUser?.displayName || ''}`)
-        );
-        break;
+        filteredNotifications = allNotifications.filter(
+          (notif) =>
+            notif.type === "comment" &&
+            notif.commentText &&
+            notif.commentText.includes(`@${currentUser?.displayName || ""}`),
+        )
+        break
       case "all":
       default:
-        filteredNotifications = allNotifications;
-        break;
+        filteredNotifications = allNotifications
+        break
     }
-    
+
     if (filteredNotifications.length === 0) {
-      showEmptyStateForFilter(filter);
+      showEmptyStateForFilter(filter)
     } else {
-      updateNotificationsUI(filteredNotifications);
+      updateNotificationsUI(filteredNotifications)
     }
   }
-  
+
   function showEmptyState() {
-    if (!notificationsFeed) return;
-    
+    if (!notificationsFeed) return
+
     notificationsFeed.innerHTML = `
       <div class="ursac-notifications-empty">
         <i class="fas fa-bell-slash"></i>
         <p>No notifications yet</p>
       </div>
-    `;
+    `
   }
-  
+
   function showEmptyStateForFilter(filter) {
-    if (!notificationsFeed) return;
-    
-    let message = "";
-    switch(filter) {
+    if (!notificationsFeed) return
+
+    let message = ""
+    switch (filter) {
       case "unread":
-        message = "No unread notifications";
-        break;
+        message = "No unread notifications"
+        break
       case "mentions":
-        message = "No mentions yet";
-        break;
+        message = "No mentions yet"
+        break
       default:
-        message = "No notifications yet";
+        message = "No notifications yet"
     }
-    
+
     notificationsFeed.innerHTML = `
       <div class="ursac-notifications-empty">
         <i class="fas fa-bell-slash"></i>
         <p>${message}</p>
       </div>
-    `;
+    `
   }
 
   function updateNotificationsUI(notifications) {
-    if (!notificationsFeed) return;
+    if (!notificationsFeed) return
 
     // First, fetch all user data needed for these notifications
-    const userIds = [...new Set(notifications.map(notif => notif.userId))];
-    
+    const userIds = [...new Set(notifications.map((notif) => notif.userId))]
+
     // Fetch user data for all users in the notifications
     Promise.all(
-      userIds.map(userId => {
+      userIds.map((userId) => {
         // Check if we already have this user's data in cache
         if (userDataCache[userId]) {
-          return Promise.resolve(userDataCache[userId]);
-        }
-        
-        // Fetch user data from Firebase
-        return firebase.database().ref(`users/${userId}`).once('value')
-          .then(snapshot => {
-            const userData = snapshot.val();
-            if (userData) {
-              // Store in cache for future use
-              userDataCache[userId] = userData;
-              return userData;
-            }
-            return null;
-          });
-      })
-    ).then(() => {
-      // Now render notifications with user data
-      notificationsFeed.innerHTML = notifications.map(notif => {
-        let notifContent = '';
-        let categoryIcon = '';
-        const userData = userDataCache[notif.userId] || { firstName: 'Unknown', lastName: 'User' };
-        const userName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
-        
-        if (notif.type === 'comment') {
-          categoryIcon = '<i class="fas fa-comment"></i>';
-          notifContent = `
-            <strong>${userName}</strong> commented on your post:
-            <div class="ursac-notification-preview">"${(notif.commentText || '').substring(0, 50)}${(notif.commentText || '').length > 50 ? '...' : ''}"</div>
-          `;
-        } else if (notif.type === 'like') {
-          categoryIcon = '<i class="fas fa-thumbs-up"></i>';
-          notifContent = `<strong>${userName}</strong> liked your post`;
-        } else if (notif.type === 'mention') {
-          categoryIcon = '<i class="fas fa-at"></i>';
-          notifContent = `<strong>${userName}</strong> mentioned you in a comment`;
-        } else if (notif.type === 'reply') {
-          categoryIcon = '<i class="fas fa-reply"></i>';
-          notifContent = `
-            <strong>${userName}</strong> replied to your comment:
-            <div class="ursac-notification-preview">"${(notif.commentText || '').substring(0, 50)}${(notif.commentText || '').length > 50 ? '...' : ''}"</div>
-          `;
+          return Promise.resolve(userDataCache[userId])
         }
 
-        return `
-          <div class="ursac-notification-item ${notif.read ? '' : 'unread'}" 
+        // Fetch user data from Firebase
+        return database
+          .ref(`users/${userId}`)
+          .once("value")
+          .then((snapshot) => {
+            const userData = snapshot.val()
+            if (userData) {
+              // Store in cache for future use
+              userDataCache[userId] = userData
+              return userData
+            }
+            return null
+          })
+      }),
+    ).then(() => {
+      // Now render notifications with user data
+      notificationsFeed.innerHTML = notifications
+        .map((notif) => {
+          let notifContent = ""
+          let categoryIcon = ""
+          const userData = userDataCache[notif.userId] || { firstName: "Unknown", lastName: "User" }
+          const userName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+
+          if (notif.type === "message") {
+            categoryIcon = '<i class="fas fa-comment"></i>'
+            notifContent = `
+            <strong>${userName}</strong> sent you a message:
+            <div class="ursac-notification-preview">"${(notif.commentText || "").substring(0, 50)}${(notif.commentText || "").length > 50 ? "..." : ""}"</div>
+          `
+          } else if (notif.type === "comment") {
+            categoryIcon = '<i class="fas fa-comment-dots"></i>'
+            notifContent = `
+            <strong>${userName}</strong> commented on your post:
+            <div class="ursac-notification-preview">"${(notif.commentText || "").substring(0, 50)}${(notif.commentText || "").length > 50 ? "..." : ""}"</div>
+          `
+          } else if (notif.type === "like") {
+            categoryIcon = '<i class="fas fa-thumbs-up"></i>'
+            notifContent = `<strong>${userName}</strong> liked your post`
+          } else if (notif.type === "mention") {
+            categoryIcon = '<i class="fas fa-at"></i>'
+            notifContent = `<strong>${userName}</strong> mentioned you in a comment`
+          } else if (notif.type === "reply") {
+            categoryIcon = '<i class="fas fa-reply"></i>'
+            notifContent = `
+            <strong>${userName}</strong> replied to your comment:
+            <div class="ursac-notification-preview">"${(notif.commentText || "").substring(0, 50)}${(notif.commentText || "").length > 50 ? "..." : ""}"</div>
+          `
+          }
+
+          // Create action buttons based on notification type
+          let actionButtons = ""
+
+          if (notif.type === "message") {
+            actionButtons = `
+            <button class="ursac-view-button" onclick="handleMessageNotificationClick('${notif.id}', '${notif.conversationId}', '${notif.userId}', '${notif.messageId || ""}')">View</button>
+          `
+          } else if (notif.type === "like" || notif.type === "comment" || notif.type === "reply" || notif.type === "mention") {
+            actionButtons = `
+            <button class="ursac-view-button" onclick="handlePostNotificationClick('${notif.id}', '${notif.postId}', '${notif.type}', '${notif.commentId || ""}')">View</button>
+          `
+          } else {
+            actionButtons = `
+            <button class="ursac-view-button" onclick="handleNotificationClick('${notif.id}', '${notif.postId}')">View</button>
+          `
+          }
+
+          if (!notif.read) {
+            actionButtons += `<button class="ursac-mark-read-button" onclick="markNotificationAsRead('${notif.id}', event)">Mark as read</button>`
+          }
+
+          return `
+          <div class="ursac-notification-item ${notif.read ? "" : "unread"}" 
                data-notification-id="${notif.id}" 
-               data-post-id="${notif.postId}">
+               data-post-id="${notif.postId || ""}"
+               data-conversation-id="${notif.conversationId || ""}"
+               data-message-id="${notif.messageId || ""}"
+               data-comment-id="${notif.commentId || ""}">
             <div class="ursac-notification-icon">
               ${categoryIcon}
             </div>
@@ -206,78 +253,130 @@ document.addEventListener("DOMContentLoaded", function () {
               </div>
             </div>
             <div class="ursac-notification-actions">
-              <button class="ursac-view-button" onclick="handleNotificationClick('${notif.id}', '${notif.postId}')">View</button>
-              ${!notif.read ? `<button class="ursac-mark-read-button" onclick="markNotificationAsRead('${notif.id}', event)">Mark as read</button>` : ''}
+              ${actionButtons}
             </div>
           </div>
-        `;
-      }).join('');
-    });
+        `
+        })
+        .join("")
+    })
   }
 
   function updateNotificationBadge(count) {
-    document.querySelectorAll('.ursac-notification-badge').forEach(badge => {
+    document.querySelectorAll(".ursac-notification-badge").forEach((badge) => {
       if (count > 0) {
-        badge.style.display = 'flex';
-        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = "flex"
+        badge.textContent = count > 99 ? "99+" : count
       } else {
-        badge.style.display = 'none';
+        badge.style.display = "none"
       }
-    });
+    })
   }
-
-  // Helper function to get user name (placeholder - should be replaced with actual user data)
-  // function getUserName(userId) {
-  //   // In a real implementation, you would fetch the user's name from the database
-  //   // For now, we'll return a placeholder
-  //   return "User";
-  // }
 
   // Helper function to format timestamps
   function formatTimeAgo(timestamp) {
-    if (!timestamp) return 'Unknown';
-    
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now - date) / 1000);
-    
-    if (diffInSeconds < 60) return 'Just now';
-    
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays}d ago`;
-    
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return date.toLocaleDateString(undefined, options);
+    if (!timestamp) return "Unknown"
+
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffInSeconds = Math.floor((now - date) / 1000)
+
+    if (diffInSeconds < 60) return "Just now"
+
+    const diffInMinutes = Math.floor(diffInSeconds / 60)
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+
+    const diffInHours = Math.floor(diffInMinutes / 60)
+    if (diffInHours < 24) return `${diffInHours}h ago`
+
+    const diffInDays = Math.floor(diffInHours / 24)
+    if (diffInDays < 7) return `${diffInDays}d ago`
+
+    const options = { year: "numeric", month: "short", day: "numeric" }
+    return date.toLocaleDateString(undefined, options)
   }
 
   // Set up filter option click handlers
-  filterOptions.forEach(option => {
-    option.addEventListener('click', function() {
-      // Remove active class from all options
-      filterOptions.forEach(opt => opt.classList.remove('active'));
-      // Add active class to clicked option
-      this.classList.add('active');
-      // Apply the filter
-      filterNotifications(this.getAttribute('data-filter'));
-    });
-  });
-  
+  if (filterOptions) {
+    filterOptions.forEach((option) => {
+      option.addEventListener("click", function () {
+        // Remove active class from all options
+        filterOptions.forEach((opt) => opt.classList.remove("active"))
+        // Add active class to clicked option
+        this.classList.add("active")
+        // Apply the filter
+        filterNotifications(this.getAttribute("data-filter"))
+      })
+    })
+  }
+
   // Set up mark all as read button
   if (markAllReadBtn) {
-    markAllReadBtn.addEventListener('click', function() {
-      markAllNotificationsAsRead();
-    });
+    markAllReadBtn.addEventListener("click", () => {
+      markAllNotificationsAsRead()
+    })
+  }
+
+  // Check if we're on the homepage and need to highlight a post
+  function checkForPostHighlight() {
+    const urlParams = new URLSearchParams(window.location.search)
+    const highlightPostId = urlParams.get("highlight")
+    const highlightCommentId = urlParams.get("comment")
+    
+    if (highlightPostId) {
+      // Find the post element
+      const postElement = document.querySelector(`.ursac-post-card[data-post-id="${highlightPostId}"]`)
+      
+      if (postElement) {
+        // Scroll to the post
+        postElement.scrollIntoView({ behavior: "smooth", block: "center" })
+        
+        // Highlight the post
+        postElement.classList.add("ursac-post-highlight")
+        
+        // Remove highlight after animation completes
+        setTimeout(() => {
+          postElement.classList.remove("ursac-post-highlight")
+        }, 2000)
+        
+        // If there's a specific comment to highlight
+        if (highlightCommentId) {
+          setTimeout(() => {
+            const commentElement = document.querySelector(`.ursac-comment[data-comment-id="${highlightCommentId}"]`)
+            if (commentElement) {
+              // Expand comments section if it's collapsed
+              const commentsSection = postElement.querySelector('.ursac-post-comments')
+              if (commentsSection && commentsSection.style.display === 'none') {
+                const commentToggle = postElement.querySelector('.ursac-post-stat[data-action="comment"]')
+                if (commentToggle) {
+                  commentToggle.click()
+                }
+              }
+              
+              // Scroll to the comment
+              commentElement.scrollIntoView({ behavior: "smooth", block: "center" })
+              
+              // Highlight the comment
+              commentElement.classList.add("ursac-comment-highlight")
+              
+              // Remove highlight after animation completes
+              setTimeout(() => {
+                commentElement.classList.remove("ursac-comment-highlight")
+              }, 2000)
+            }
+          }, 500) // Small delay to ensure comments are loaded
+        }
+        
+        // Clean up the URL
+        const newUrl = window.location.pathname
+        window.history.replaceState({}, document.title, newUrl)
+      }
+    }
   }
 
   // Expose these functions globally
   window.handleNotificationClick = function(notificationId, postId) {
-    if (!currentUser) return;
+    if (!currentUser) return
 
     // Mark notification as read
     firebase.database()
@@ -285,19 +384,109 @@ document.addEventListener("DOMContentLoaded", function () {
       .update({ read: true })
       .then(() => {
         // Navigate to the post page with the post highlighted
-        window.location.href = `/homepage?highlight=${postId}`;
+        window.location.href = `/homepage?highlight=${postId}`
       })
-      .catch(error => {
-        console.error("Error marking notification as read:", error);
-      });
-  };
-  
+      .catch((error) => {
+        console.error("Error marking notification as read:", error)
+      })
+  }
+
+  window.handlePostNotificationClick = function(notificationId, postId, notificationType, commentId) {
+    if (!currentUser) return
+
+    // Mark notification as read
+    firebase.database()
+      .ref(`notifications/${currentUser.uid}/${notificationId}`)
+      .update({ read: true })
+      .then(() => {
+        // If we're already on the homepage
+        if (window.location.pathname === '/homepage' || window.location.pathname === '/') {
+          // Find the post element
+          const postElement = document.querySelector(`.ursac-post-card[data-post-id="${postId}"]`)
+          
+          if (postElement) {
+            // Scroll to the post
+            postElement.scrollIntoView({ behavior: "smooth", block: "center" })
+            
+            // Highlight the post
+            postElement.classList.add("ursac-post-highlight")
+            
+            // Remove highlight after animation completes
+            setTimeout(() => {
+              postElement.classList.remove("ursac-post-highlight")
+            }, 2000)
+            
+            // If it's a comment notification and we have a comment ID
+            if ((notificationType === 'comment' || notificationType === 'reply') && commentId) {
+              setTimeout(() => {
+                // Expand comments section if it's collapsed
+                const commentsSection = postElement.querySelector('.ursac-post-comments')
+                if (commentsSection && commentsSection.style.display === 'none') {
+                  const commentToggle = postElement.querySelector('.ursac-post-stat[data-action="comment"]')
+                  if (commentToggle) {
+                    commentToggle.click()
+                  }
+                }
+                
+                // Find and highlight the specific comment
+                const commentElement = document.querySelector(`.ursac-comment[data-comment-id="${commentId}"]`)
+                if (commentElement) {
+                  commentElement.scrollIntoView({ behavior: "smooth", block: "center" })
+                  commentElement.classList.add("ursac-comment-highlight")
+                  
+                  setTimeout(() => {
+                    commentElement.classList.remove("ursac-comment-highlight")
+                  }, 2000)
+                }
+              }, 500) // Small delay to ensure comments are loaded
+            }
+          } else {
+            // If post not found on current page, navigate to homepage with parameters
+            window.location.href = commentId 
+              ? `/homepage?highlight=${postId}&comment=${commentId}` 
+              : `/homepage?highlight=${postId}`
+          }
+        } else {
+          // Navigate to the homepage with parameters
+          window.location.href = commentId 
+            ? `/homepage?highlight=${postId}&comment=${commentId}` 
+            : `/homepage?highlight=${postId}`
+        }
+      })
+      .catch((error) => {
+        console.error("Error marking notification as read:", error)
+      })
+  }
+
+  window.handleMessageNotificationClick = function(notificationId, conversationId, userId, messageId) {
+    if (!currentUser) return
+
+    // Mark notification as read
+    firebase.database()
+      .ref(`notifications/${currentUser.uid}/${notificationId}`)
+      .update({ read: true })
+      .then(() => {
+        // If we're already on the messages page, just open the conversation
+        if (window.location.href.includes("/messages")) {
+          if (window.openConversationFromNotification) {
+            window.openConversationFromNotification(conversationId, userId, messageId)
+          }
+        } else {
+          // Navigate to the messages page with parameters to open this conversation
+          window.location.href = `/messages?conversation=${conversationId}&user=${userId}&message=${messageId}`
+        }
+      })
+      .catch((error) => {
+        console.error("Error marking notification as read:", error)
+      })
+  }
+
   window.markNotificationAsRead = function(notificationId, event) {
-    if (!currentUser) return;
+    if (!currentUser) return
     
     // Stop the click event from bubbling up to the parent
     if (event) {
-      event.stopPropagation();
+      event.stopPropagation()
     }
 
     firebase.database()
@@ -305,37 +494,37 @@ document.addEventListener("DOMContentLoaded", function () {
       .update({ read: true })
       .then(() => {
         // Update UI
-        const notifElement = document.querySelector(`[data-notification-id="${notificationId}"]`);
+        const notifElement = document.querySelector(`[data-notification-id="${notificationId}"]`)
         if (notifElement) {
-          notifElement.classList.remove('unread');
-          const markReadBtn = notifElement.querySelector('.ursac-mark-read-button');
+          notifElement.classList.remove("unread")
+          const markReadBtn = notifElement.querySelector(".ursac-mark-read-button")
           if (markReadBtn) {
-            markReadBtn.remove();
+            markReadBtn.remove()
           }
         }
         
         // If we're on the unread filter, we might need to refresh the list
-        if (currentFilter === 'unread') {
-          filterNotifications('unread');
+        if (currentFilter === "unread") {
+          filterNotifications("unread")
         }
       })
-      .catch(error => {
-        console.error("Error marking notification as read:", error);
-      });
-  };
+      .catch((error) => {
+        console.error("Error marking notification as read:", error)
+      })
+  }
 
   window.markAllNotificationsAsRead = function() {
-    if (!currentUser) return;
+    if (!currentUser) return
 
-    const updates = {};
+    const updates = {}
     allNotifications.forEach(notif => {
       if (!notif.read) {
-        updates[`${notif.id}/read`] = true;
+        updates[`${notif.id}/read`] = true
       }
-    });
+    })
     
     if (Object.keys(updates).length === 0) {
-      return; // No unread notifications
+      return // No unread notifications
     }
     
     firebase.database()
@@ -343,18 +532,18 @@ document.addEventListener("DOMContentLoaded", function () {
       .update(updates)
       .then(() => {
         // Update UI based on current filter
-        filterNotifications(currentFilter);
+        filterNotifications(currentFilter)
         
         // Update notification badge
-        updateNotificationBadge(0);
+        updateNotificationBadge(0)
       })
-      .catch(error => {
-        console.error("Error marking all notifications as read:", error);
-      });
-  };
+      .catch((error) => {
+        console.error("Error marking all notifications as read:", error)
+      })
+  }
 
   // Add some CSS for notification badge positioning
-  const style = document.createElement('style');
+  const style = document.createElement('style')
   style.textContent = `
     .ursac-notification-indicator {
       position: relative;
@@ -376,132 +565,85 @@ document.addEventListener("DOMContentLoaded", function () {
       padding: 0 4px;
       z-index: 100;
     }
-    .ursac-notification-item {
-      display: flex;
-      padding: 15px;
-      border-bottom: 1px solid #eee;
-      transition: background-color 0.2s;
+    .ursac-post-highlight {
+      animation: highlight-post 2s ease-out;
     }
-    .ursac-notification-item:hover {
-      background-color: #f9f9f9;
+    .ursac-comment-highlight {
+      animation: highlight-comment 2s ease-out;
     }
-    .ursac-notification-item.unread {
-      background-color: #f0f7ff;
+    @keyframes highlight-post {
+      0% {
+        background-color: rgba(255, 236, 179, 0.3);
+        transform: scale(1.01);
+        box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
+      }
+      100% {
+        background-color: white;
+        transform: scale(1);
+        box-shadow: var(--box-shadow);
+      }
     }
-    .ursac-notification-icon {
-      margin-right: 15px;
-      color: #4a76a8;
-      font-size: 20px;
-      width: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    @keyframes highlight-comment {
+      0% {
+        background-color: rgba(255, 236, 179, 0.3);
+      }
+      100% {
+        background-color: transparent;
+      }
     }
-    .ursac-notification-content {
-      flex: 1;
-    }
-    .ursac-notification-text {
-      margin-bottom: 5px;
-    }
-    .ursac-notification-preview {
-      color: #666;
-      font-style: italic;
-      margin-top: 5px;
-    }
-    .ursac-notification-meta {
-      font-size: 12px;
-      color: #888;
-    }
-    .ursac-notification-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-    .ursac-view-button, .ursac-mark-read-button {
-      padding: 5px 10px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .ursac-view-button {
-      background-color: #4a76a8;
-      color: white;
-    }
-    .ursac-mark-read-button {
-      background-color: #e0e0e0;
-      color: #333;
-    }
-    .ursac-notifications-empty {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 50px 0;
-      color: #888;
-    }
-    .ursac-notifications-empty i {
-      font-size: 40px;
-      margin-bottom: 15px;
-      color: #ccc;
-    }
-    .ursac-notifications-filters {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 15px;
-      border-bottom: 1px solid #eee;
-    }
-    .ursac-filter-options {
-      display: flex;
-      gap: 15px;
-    }
-    .ursac-filter-option {
-      cursor: pointer;
-      padding: 5px 10px;
-      border-radius: 15px;
-      transition: background-color 0.2s;
-    }
-    .ursac-filter-option:hover {
-      background-color: #f0f0f0;
-    }
-    .ursac-filter-option.active {
-      background-color: #4a76a8;
-      color: white;
-    }
-    .ursac-mark-all-read {
-      cursor: pointer;
-      color: #4a76a8;
-      font-weight: 500;
-    }
-    .ursac-mark-all-read:hover {
-      text-decoration: underline;
-    }
-  `;
-  document.head.appendChild(style);
+  `
+  document.head.appendChild(style)
 
   // Make sure all notification bell icons have the proper container
   document.querySelectorAll('.notification-bell').forEach(bell => {
     // If bell is not already in a container with relative positioning
     if (!bell.parentElement.classList.contains('notification-bell-container')) {
       // Create container
-      const container = document.createElement('div');
-      container.className = 'notification-bell-container';
+      const container = document.createElement('div')
+      container.className = 'notification-bell-container'
       // Insert container before bell
-      bell.parentNode.insertBefore(container, bell);
+      bell.parentNode.insertBefore(container, bell)
       // Move bell into container
-      container.appendChild(bell);
+      container.appendChild(bell)
       
       // Add badge if not exists
       if (!container.querySelector('.ursac-notification-badge')) {
-        const badge = document.createElement('span');
-        badge.className = 'ursac-notification-badge';
-        badge.style.display = 'none';
-        container.appendChild(badge);
+        const badge = document.createElement('span')
+        badge.className = 'ursac-notification-badge'
+        badge.style.display = 'none'
+        container.appendChild(badge)
       }
     }
-  });
+  })
 
-  // Start loading notifications
-  loadNotifications();
-});
+  // Check URL parameters for direct navigation from notifications
+  function checkUrlParameters() {
+    // Check for message parameters
+    const urlParams = new URLSearchParams(window.location.search)
+    const conversationId = urlParams.get("conversation")
+    const userId = urlParams.get("user")
+    const messageId = urlParams.get("message")
+
+    if (conversationId && userId) {
+      // If we have conversation parameters, open that conversation
+      if (window.openConversationFromNotification) {
+        window.openConversationFromNotification(conversationId, userId, messageId)
+
+        // Clean up the URL
+        const newUrl = window.location.pathname
+        window.history.replaceState({}, document.title, newUrl)
+      }
+    }
+    
+    // Check for post highlight parameters
+    if (window.location.pathname === '/homepage' || window.location.pathname === '/') {
+      checkForPostHighlight()
+    }
+  }
+
+  // Initialize
+  loadNotifications()
+
+  // Check URL parameters after a short delay to ensure everything is loaded
+  setTimeout(checkUrlParameters, 1000)
+})
