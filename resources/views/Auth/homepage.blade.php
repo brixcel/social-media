@@ -32,18 +32,12 @@
           <i class="fas fa-comment"></i>
           <span>Messages</span>
         </a>
-        <a href="#" class="ursac-menu-item">
-          <i class="fas fa-users"></i>
-          <span>Organizations</span>
-        </a>
-        <a href="#" class="ursac-menu-item">
+
+        <a href="{{ route('profile') }}" class="ursac-menu-item">
           <i class="fas fa-user"></i>
           <span>Profile</span>
         </a>
-        <a href="#" class="ursac-menu-item">
-          <i class="fas fa-cog"></i>
-          <span>Settings</span>
-        </a>
+        
         
         <!-- Post Button (After Settings) -->
         <button class="ursac-sidebar-post-btn" id="open-post-modal">
@@ -207,60 +201,10 @@
         </div>
       </div>
       
-      <!-- Events Section -->
-      <div class="ursac-sidebar-section">
-        <h3 class="ursac-sidebar-title">Upcoming Events</h3>
-        <div class="ursac-event-list">
-          <div class="ursac-event-item">
-            <div class="ursac-event-date">
-              <div class="ursac-event-month">SEP</div>
-              <div class="ursac-event-day">15</div>
-            </div>
-            <div class="ursac-event-info">
-              <div class="ursac-event-name">Freshmen Orientation</div>
-              <div class="ursac-event-location">Main Auditorium</div>
-            </div>
-          </div>
-          <div class="ursac-event-item">
-            <div class="ursac-event-date">
-              <div class="ursac-event-month">OCT</div>
-              <div class="ursac-event-day">05</div>
-            </div>
-            <div class="ursac-event-info">
-              <div class="ursac-event-name">Tech Symposium 2023</div>
-              <div class="ursac-event-location">Engineering Building</div>
-            </div>
-          </div>
-        </div>
-      </div>
       
-      <!-- Friends Section -->
-      <div class="ursac-sidebar-section">
-        <h3 class="ursac-sidebar-title">Friends</h3>
-        <div class="ursac-friend-list" id="friend-list">
-          <!-- Friends will be loaded dynamically -->
-          <div class="ursac-friend-item">
-            <div class="ursac-friend-avatar">
-              <div class="ursac-friend-status ursac-status-online"></div>
-            </div>
-            <div class="ursac-friend-info">
-              <div class="ursac-friend-name">Maria Santos</div>
-              <div class="ursac-friend-course">BS - IT</div>
-            </div>
-          </div>
-          <div class="ursac-friend-item">
-            <div class="ursac-friend-avatar">
-              <div class="ursac-friend-status ursac-status-offline"></div>
-            </div>
-            <div class="ursac-friend-info">
-              <div class="ursac-friend-name">John Reyes</div>
-              <div class="ursac-friend-course">BS - CpE</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+      
+      
+
 
   <!-- Post Modal -->
   <div class="ursac-upload-modal" id="post-modal" style="display:none;z-index:2000;">
@@ -352,5 +296,6 @@
 </script>
   <script src="script.js"></script>
   <script src="notifications.js"></script>
+  <script src="messages.js"></script>
 </body>
 </html>

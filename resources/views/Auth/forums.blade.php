@@ -31,17 +31,9 @@
           <i class="fas fa-comment"></i>
           <span>Messages</span>
         </a>
-        <a href="#" class="ursac-menu-item">
-          <i class="fas fa-users"></i>
-          <span>Organizations</span>
-        </a>
-        <a href="#" class="ursac-menu-item">
+        <a href="{{ route('profile') }}" class="ursac-menu-item">
           <i class="fas fa-user"></i>
           <span>Profile</span>
-        </a>
-        <a href="#" class="ursac-menu-item">
-          <i class="fas fa-cog"></i>
-          <span>Settings</span>
         </a>
         
         <!-- Post Button (After Settings) -->
@@ -242,34 +234,8 @@
         </div>
       </div>
       
-      <!-- Events Section -->
-      <div class="ursac-sidebar-section">
-        <h3 class="ursac-sidebar-title">Upcoming Events</h3>
-        <div class="ursac-event-list">
-          <div class="ursac-event-item">
-            <div class="ursac-event-date">
-              <div class="ursac-event-month">SEP</div>
-              <div class="ursac-event-day">15</div>
-            </div>
-            <div class="ursac-event-info">
-              <div class="ursac-event-name">Freshmen Orientation</div>
-              <div class="ursac-event-location">Main Auditorium</div>
-            </div>
-          </div>
-          <div class="ursac-event-item">
-            <div class="ursac-event-date">
-              <div class="ursac-event-month">OCT</div>
-              <div class="ursac-event-day">05</div>
-            </div>
-            <div class="ursac-event-info">
-              <div class="ursac-event-name">Tech Symposium 2023</div>
-              <div class="ursac-event-location">Engineering Building</div>
-            </div>
-          </div>
-        </div>
-      </div>
       
-      <!-- Friends Section -->
+     <!-- Friends Section -->
       <div class="ursac-sidebar-section">
         <h3 class="ursac-sidebar-title">Friends</h3>
         <div class="ursac-friend-list" id="friend-list">

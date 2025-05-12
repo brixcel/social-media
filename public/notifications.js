@@ -21,10 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
     firebase.auth().onAuthStateChanged((user) => {
       if (user) {
         currentUser = user
-        console.log("Notifications: Authenticated as:", user.email)
         setupNotificationListener(user.uid)
       } else {
-        console.log("Notifications: No user authenticated")
         // For testing purposes only (remove in production):
         currentUser = {
           uid: "mockuser123",
@@ -387,7 +385,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.href = `/homepage?highlight=${postId}`
       })
       .catch((error) => {
-        console.error("Error marking notification as read:", error)
+        // Error handling
       })
   }
 
@@ -454,7 +452,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       })
       .catch((error) => {
-        console.error("Error marking notification as read:", error)
+        // Error handling
       })
   }
 
@@ -477,7 +475,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       })
       .catch((error) => {
-        console.error("Error marking notification as read:", error)
+        // Error handling
       })
   }
 
@@ -509,7 +507,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       })
       .catch((error) => {
-        console.error("Error marking notification as read:", error)
+        // Error handling
       })
   }
 
@@ -538,7 +536,7 @@ document.addEventListener("DOMContentLoaded", () => {
         updateNotificationBadge(0)
       })
       .catch((error) => {
-        console.error("Error marking all notifications as read:", error)
+        // Error handling
       })
   }
 
