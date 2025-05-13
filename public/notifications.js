@@ -137,83 +137,97 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function updateNotificationsUI(notifications) {
-    if (!notificationsFeed) return;
+  if (!notificationsFeed) return;
 
-    // First, fetch all user data needed for these notifications
-    const userIds = [...new Set(notifications.map(notif => notif.userId))];
-    
-    // Fetch user data for all users in the notifications
-    Promise.all(
-      userIds.map(userId => {
-        // Check if we already have this user's data in cache
-        if (userDataCache[userId]) {
-          return Promise.resolve(userDataCache[userId]);
-        }
-        
-        // Fetch user data from Firebase
-        return firebase.database().ref(`users/${userId}`).once('value')
-          .then(snapshot => {
-            const userData = snapshot.val();
-            if (userData) {
-              // Store in cache for future use
-              userDataCache[userId] = userData;
-              return userData;
-            }
-            return null;
-          });
-      })
-    ).then(() => {
-      // Now render notifications with user data
-      notificationsFeed.innerHTML = notifications.map(notif => {
-        let notifContent = '';
-        let categoryIcon = '';
-        const userData = userDataCache[notif.userId] || { firstName: 'Unknown', lastName: 'User' };
-        const userName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
-        
-        if (notif.type === 'comment') {
-          categoryIcon = '<i class="fas fa-comment"></i>';
-          notifContent = `
-            <strong>${userName}</strong> commented on your post:
-            <div class="ursac-notification-preview">"${(notif.commentText || '').substring(0, 50)}${(notif.commentText || '').length > 50 ? '...' : ''}"</div>
-          `;
-        } else if (notif.type === 'like') {
-          categoryIcon = '<i class="fas fa-thumbs-up"></i>';
-          notifContent = `<strong>${userName}</strong> liked your post`;
-        } else if (notif.type === 'mention') {
-          categoryIcon = '<i class="fas fa-at"></i>';
-          notifContent = `<strong>${userName}</strong> mentioned you in a comment`;
-        } else if (notif.type === 'reply') {
-          categoryIcon = '<i class="fas fa-reply"></i>';
-          notifContent = `
-            <strong>${userName}</strong> replied to your comment:
-            <div class="ursac-notification-preview">"${(notif.commentText || '').substring(0, 50)}${(notif.commentText || '').length > 50 ? '...' : ''}"</div>
-          `;
-        }
+  // First, fetch all user data needed for these notifications
+  const userIds = [...new Set(notifications.map(notif => notif.userId))];
+  
+  // Fetch user data for all users in the notifications
+  Promise.all(
+    userIds.map(userId => {
+      // Check if we already have this user's data in cache
+      if (userDataCache[userId]) {
+        return Promise.resolve(userDataCache[userId]);
+      }
+      
+      // Fetch user data from Firebase
+      return firebase.database().ref(`users/${userId}`).once('value')
+        .then(snapshot => {
+          const userData = snapshot.val();
+          if (userData) {
+            // Store in cache for future use
+            userDataCache[userId] = userData;
+            return userData;
+          }
+          return null;
+        });
+    })
+  ).then(() => {
+    // Now render notifications with user data
+    notificationsFeed.innerHTML = notifications.map(notif => {
+      let notifContent = '';
+      let categoryIcon = '';
+      const userData = userDataCache[notif.userId] || { firstName: 'Unknown', lastName: 'User' };
+      const userName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
+      
+      if (notif.type === 'comment') {
+        categoryIcon = '<i class="fas fa-comment"></i>';
+        notifContent = `
+          <strong>${userName}</strong> commented on your post:
+          <div class="ursac-notification-preview">"${(notif.commentText || '').substring(0, 50)}${(notif.commentText || '').length > 50 ? '...' : ''}"</div>
+        `;
+      } else if (notif.type === 'like') {
+        categoryIcon = '<i class="fas fa-thumbs-up"></i>';
+        notifContent = `<strong>${userName}</strong> liked your post`;
+      } else if (notif.type === 'mention') {
+        categoryIcon = '<i class="fas fa-at"></i>';
+        notifContent = `<strong>${userName}</strong> mentioned you in a comment`;
+      } else if (notif.type === 'reply') {
+        categoryIcon = '<i class="fas fa-reply"></i>';
+        notifContent = `
+          <strong>${userName}</strong> replied to your comment:
+          <div class="ursac-notification-preview">"${(notif.commentText || '').substring(0, 50)}${(notif.commentText || '').length > 50 ? '...' : ''}"</div>
+        `;
+      } else if (notif.type === 'forum_created') {
+        categoryIcon = '<i class="fas fa-comments"></i>';
+        notifContent = `
+          <strong>${userName}</strong> created a new forum: 
+          <div class="ursac-notification-preview">"${(notif.message || '').substring(0, 50)}${(notif.message || '').length > 50 ? '...' : ''}"</div>
+        `;
+      } else if (notif.type === 'forum_joined') { // Handling 'forum_joined' notification
+        categoryIcon = '<i class="fas fa-users"></i>';  // Icon for joining forum
+        notifContent = `
+          <strong>${userName}</strong> joined the forum: 
+          <div class="ursac-notification-preview">"${(notif.message || '').substring(0, 50)}${(notif.message || '').length > 50 ? '...' : ''}"</div>
+        `;
+      }
 
-        return `
-          <div class="ursac-notification-item ${notif.read ? '' : 'unread'}" 
-               data-notification-id="${notif.id}" 
-               data-post-id="${notif.postId}">
-            <div class="ursac-notification-icon">
-              ${categoryIcon}
+      return `
+        <div class="ursac-notification-item ${notif.read ? '' : 'unread'}" 
+             data-notification-id="${notif.id}" 
+             data-post-id="${notif.postId}">
+          <div class="ursac-notification-icon">
+            ${categoryIcon}
+          </div>
+          <div class="ursac-notification-content">
+            <div class="ursac-notification-text">
+              ${notifContent}
             </div>
-            <div class="ursac-notification-content">
-              <div class="ursac-notification-text">
-                ${notifContent}
-              </div>
-              <div class="ursac-notification-meta">
-                <span class="ursac-notification-time">${formatTimeAgo(notif.timestamp)}</span>
-              </div>
-            </div>
-            <div class="ursac-notification-actions">
-              <button class="ursac-view-button" onclick="handleNotificationClick('${notif.id}', '${notif.postId}')">View</button>
-              ${!notif.read ? `<button class="ursac-mark-read-button" onclick="markNotificationAsRead('${notif.id}', event)">Mark as read</button>` : ''}
+            <div class="ursac-notification-meta">
+              <span class="ursac-notification-time">${formatTimeAgo(notif.timestamp)}</span>
             </div>
           </div>
-        `;
-      }).join('');
-    });
-  }
+          <div class="ursac-notification-actions">
+            <button class="ursac-view-button" onclick="handleNotificationClick('${notif.id}', '${notif.postId}')">View</button>
+            ${!notif.read ? `<button class="ursac-mark-read-button" onclick="markNotificationAsRead('${notif.id}', event)">Mark as read</button>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  });
+}
+
+
 
   function updateNotificationBadge(count) {
     document.querySelectorAll('.ursac-notification-badge').forEach(badge => {
@@ -479,6 +493,32 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   `;
   document.head.appendChild(style);
+
+
+  // Ensure Firebase and authentication are initialized
+window.handleForumNotificationClick = (notificationId, forumId) => {
+  // Check if the user is logged in
+  const currentUser = firebase.auth().currentUser;
+  if (!currentUser) {
+    console.log("User is not logged in.");
+    return;
+  }
+
+  // Mark notification as read in Firebase
+  firebase
+    .database()
+    .ref(`notifications/${currentUser.uid}/${notificationId}`)
+    .update({ read: true })
+    .then(() => {
+      console.log("Notification marked as read.");
+
+      // Navigate to the forum page
+      window.location.href = `/forum/${forumId}`;
+    })
+    .catch((error) => {
+      console.error("Error marking notification as read:", error);
+    });
+};
 
   // Make sure all notification bell icons have the proper container
   document.querySelectorAll('.notification-bell').forEach(bell => {
