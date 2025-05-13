@@ -207,67 +207,35 @@
     </div>
     
     <!-- Right Sidebar -->
-    <div class="ursac-sidebar-right">
+   <div class="ursac-sidebar-right">
       <!-- Forums Section -->
-      <div class="ursac-sidebar-section">
-        <h3 class="ursac-sidebar-title">Forums</h3>
-        <div class="ursac-forum-list">
-          <div class="ursac-forum-item">
-            <div class="ursac-forum-icon">
-              <i class="fas fa-graduation-cap"></i>
-            </div>
-            <div class="ursac-forum-info">
-              <div class="ursac-forum-name">Academic Discussions</div>
-              <div class="ursac-forum-count">24 new posts</div>
-            </div>
-          </div>
-          <div class="ursac-forum-item">
-            <div class="ursac-forum-icon">
-              <i class="fas fa-laptop-code"></i>
-            </div>
-            <div class="ursac-forum-info">
-              <div class="ursac-forum-name">Tech Corner</div>
-              <div class="ursac-forum-count">12 new posts</div>
-            </div>
-          </div>
-          <div class="ursac-forum-item">
-            <div class="ursac-forum-icon">
-              <i class="fas fa-bullhorn"></i>
-            </div>
-            <div class="ursac-forum-info">
-              <div class="ursac-forum-name">Announcements</div>
-              <div class="ursac-forum-count">5 new posts</div>
-            </div>
+      <div class="ursac-sidebar-section" id="forum-section">
+        <h3 class="ursac-sidebar-title">
+          Forums
+          <button class="ursac-add-forum-btn" id="add-forum-btn" style="float: right; background: none; border: none; cursor: pointer;">
+        <i class="fas fa-plus-circle" style="color: var(--primary-color); font-size: 1.2em;"></i>
+        </button>
+        </h3>
+        <div id="addForumModal" class="ursac-modal">
+          <div class="ursac-modal-content">
+            <span id="closeModalBtn" class="ursac-close">&times;</span>
+            <a href="{{ route('join') }}" class="ursac-button ursac-button-primary" id="join-forum-btn">
+              <i class="fas fa-sign-in-alt"></i>
+              <span>Join a Forum</span>
+            </a>
+            <a href="{{ route('create') }}" class="ursac-button ursac-button-secondary" id="create-forum-btn">
+              <i class="fas fa-plus-circle"></i>
+              <span>Create Your Forum</span>
+            </a>
+            <a href="{{ route('view') }}" class="ursac-button ursac-button-tertiary" id="view-forum-btn">
+              <i class="fas fa-eye"></i>
+              <span>View Your Forum</span>
+            </a>
           </div>
         </div>
-      </div>
-      
-      <!-- Events Section -->
-      <div class="ursac-sidebar-section">
-        <h3 class="ursac-sidebar-title">Upcoming Events</h3>
-        <div class="ursac-event-list">
-          <div class="ursac-event-item">
-            <div class="ursac-event-date">
-              <div class="ursac-event-month">SEP</div>
-              <div class="ursac-event-day">15</div>
-            </div>
-            <div class="ursac-event-info">
-              <div class="ursac-event-name">Freshmen Orientation</div>
-              <div class="ursac-event-location">Main Auditorium</div>
-            </div>
-          </div>
-          <div class="ursac-event-item">
-            <div class="ursac-event-date">
-              <div class="ursac-event-month">OCT</div>
-              <div class="ursac-event-day">05</div>
-            </div>
-            <div class="ursac-event-info">
-              <div class="ursac-event-name">Tech Symposium 2023</div>
-              <div class="ursac-event-location">Engineering Building</div>
-            </div>
-          </div>
+        
+        <div class="ursac-forum-list"">
         </div>
-      </div>
       
       <!-- Friends Section -->
       <div class="ursac-sidebar-section">

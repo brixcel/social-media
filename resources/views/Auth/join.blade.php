@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>URSAC Hub - Notifications</title>
+  <title>URSAC Hub - Home</title>
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="main.css">
+  
 </head>
 <body>
   <div class="ursac-container">
@@ -17,13 +18,13 @@
         <a href="#">URSAC Hub</a>
       </div>
       <div class="ursac-sidebar-menu">
-        <a href="/homepage" class="ursac-menu-item">
+        <a href="{{ route('homepage') }}" class="ursac-menu-item">
           <i class="fas fa-home"></i>
           <span>Home</span>
         </a>
-        <a href="{{ route('notifications') }}" class="ursac-menu-item ursac-menu-active">
+        <a href="{{ route('notifications') }}" class="ursac-menu-item">
           <i class="fas fa-bell ursac-notification-indicator">
-            <span class="ursac-notification-badge" style="display: none;"></span>
+            <span class="ursac-notification-badge" style="display: none;">0</span>
           </i>
           <span>Notifications</span>
         </a>
@@ -43,90 +44,50 @@
           <i class="fas fa-cog"></i>
           <span>Settings</span>
         </a>
+        
         <!-- Post Button (After Settings) -->
         <button class="ursac-sidebar-post-btn" id="open-post-modal">
           <i class="fas fa-plus"></i>
-          <span>Post</span>
+          <span></span>
         </button>
         
         <!-- User Profile Button -->
-        <div id="user-profile-btn" class="ursac-header-profile">
-          <!-- Profile button content -->
+        <div class="ursac-header-profile" id="user-profile-btn">
+          <!-- Will be populated by JS with user profile info -->
         </div>
         
         <!-- User Profile Dropdown -->
-        <div id="user-profile-dropdown" class="ursac-profile-dropdown">
-          <div id="add-account-btn" class="ursac-profile-dropdown-item">
+        <div class="ursac-profile-dropdown" id="user-profile-dropdown">
+          <div class="ursac-profile-dropdown-item" id="add-account-btn">
             <i class="fas fa-user-plus"></i>
             <span>Add an existing account</span>
           </div>
-          <div class="ursac-profile-dropdown-divider"></div>
-          <div id="logout-btn" class="ursac-profile-dropdown-item">
+          <div class="ursac-profile-dropdown-item" id="logout-btn">
             <i class="fas fa-sign-out-alt"></i>
             <span>Log out</span>
           </div>
         </div>
       </div>
     </div>
+     
     
     <!-- Main Content -->
     <div class="ursac-content-main">
+      <div class="ursac-content-header">
+      <h1>Forums</h1>
       <div class="ursac-header-search">
-        <input type="text" id="search-input" placeholder="Search notifications..." />
+        <input type="text" id="search-input" placeholder="Search a Forum" />
       </div>
-      <!-- Tabs -->
-      <div class="ursac-content-tabs">
-        <div class="ursac-tab ursac-tab-active">Notifications</div>
       </div>
-      
-      <!-- Notification Filters -->
-      <div class="ursac-notifications-filters">
-        <div class="ursac-filter-options">
-          <div class="ursac-filter-option active" data-filter="all">All</div>
-          <div class="ursac-filter-option" data-filter="unread">Unread</div>
-          <div class="ursac-filter-option" data-filter="mentions">Mentions</div>
-        </div>
-        <div class="ursac-mark-all-read" id="mark-all-read">
-          <i class="fas fa-check-double"></i> Mark all as read
-        </div>
+      <h5 style="font-weight: normal; color: white; font-size: 1.1rem;">Suggested Forums</h5>
+      <div class="ursac-forum-card">
+      <div class="ursac-forum-card-header" id="forum-card-header">
       </div>
-      
-      <!-- Notifications Feed -->
-      <div class="ursac-notifications-feed" id="notifications-feed">
-        <!-- Loading state -->
-        <div class="ursac-notifications-loading">
-          <i class="fas fa-spinner fa-spin"></i>
-          <p>Loading notifications...</p>
-        </div>
-        
-        <!-- Empty state message that will be shown when there are no notifications -->
-        <div class="ursac-notifications-empty" style="display: none;">
-          <i class="fas fa-bell-slash"></i>
-          <p>No notifications yet</p>
-        </div>
-        
-        <!-- Notification item template (will be populated dynamically) -->
-        <div class="ursac-notification-item-template" style="display: none;">
-          <div class="ursac-notification-icon">
-            <!-- Icon will be inserted here -->
-          </div>
-          <div class="ursac-notification-content">
-            <div class="ursac-notification-text">
-              <!-- Notification text will be inserted here -->
-            </div>
-            <div class="ursac-notification-meta">
-              <span class="ursac-notification-time">
-                <!-- Time will be inserted here -->
-              </span>
-            </div>
-          </div>
-          <div class="ursac-notification-actions">
-            <button class="ursac-view-button">View</button>
-            <button class="ursac-mark-read-button">Mark as read</button>
-          </div>
-        </div>
+      </div>
       </div>
     </div>
+
+    
     
     <!-- Right Sidebar -->
     <div class="ursac-sidebar-right">
@@ -156,8 +117,7 @@
           </div>
         </div>
         
-        <div class="ursac-forum-list"">
-        </div>
+        <div class="ursac-forum-list"></div>
       
       <!-- Events Section -->
       <div class="ursac-sidebar-section">
@@ -214,6 +174,8 @@
     </div>
   </div>
 
+  
+
   <!-- Scripts -->
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js"></script>
@@ -235,6 +197,43 @@
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
   </script>
+  <script>
+  // Debug functions
+  function debugFirebaseConnection() {
+    try {
+      const app = firebase.app();
+      console.log("Firebase successfully initialized");
+      
+      // Add this to check auth state
+      firebase.auth().onAuthStateChanged(function(user) {
+        console.log("Auth state changed:", user ? "User logged in" : "No user");
+      });
+    } catch (error) {
+      console.error("Firebase initialization error:", error);
+    }
+  }
+
+  // Run debug functions when page loads
+  document.addEventListener("DOMContentLoaded", function() {
+    console.log("Running diagnostics...");
+    debugFirebaseConnection();
+   
+    
+    // Test if DOM elements exist
+    const elements = [
+      "post-input", "post-button", "posts-feed", "media-preview", 
+      "file-photo", "file-video", "file-attachment", "user-profile-btn",
+      "user-profile-dropdown", "logout-btn", "add-account-btn", "open-post-modal"
+    ];
+    
+    elements.forEach(id => {
+      const el = document.getElementById(id);
+      console.log(`Element #${id} ${el ? "exists" : "MISSING!"}`);
+    });
+  });
+</script>
   <script src="script.js"></script>
-  <script type="module" src="notifications.js"></script>
+  <script src="join.js"></script>
+  <script src="notification.js"></script>
+</body>
 </html>
