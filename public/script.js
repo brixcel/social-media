@@ -123,7 +123,10 @@ const prohibitedWords = [
   "pekpek",
   "bilat",
   "kantot",
-  "iyot",
+  "iyot", 
+  "tangina",
+  "tnga",
+  "tanginamo",
 
   // English bad words
   "stupid",
