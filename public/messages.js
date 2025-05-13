@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const firebase = window.firebase
     const database = firebase.database()
     const storage = firebase.storage()
-  
+    
     // DOM Elements
     const conversationsList = document.getElementById("conversations-list")
     const conversationView = document.getElementById("conversation-view")

@@ -20,7 +20,11 @@ Route::get('/admin', [DashboardController::class, 'index']);
 Route::get('/admin/dashboard', [DashboardController::class, 'dashboard'])->name('admin.dashboard');
 Route::get('/notifications', [FirebaseAuthController::class, 'notifications'])->name('notifications');
 Route::get('/messages', [FirebaseAuthController::class, 'messages'])->name('messages');
-Route::get('/forums', [FirebaseAuthController::class, 'forums'])->name('forums');
+Route::get('/join', [FirebaseAuthController::class, 'join'])->name('join');
+Route::get('/create', [FirebaseAuthController::class, 'create'])->name('create');
+Route::get('/view', [FirebaseAuthController::class, 'view'])->name('view');
+Route::get('/homepage', [FirebaseAuthController::class, 'homepage'])->name('homepage');
+
 // Admin routes with proper middleware
 // Route::middleware(['admin'])->prefix('admin')->group(function () {
 //     Route::get('/', [DashboardController::class, 'index'])->name('admin.dashboard');
