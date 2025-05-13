@@ -144,6 +144,8 @@ const prohibitedWords = [
   "pussy",
   "whore",
   "ass",
+  "nigger",
+  "nigga",
 ]
 
 // Profanity Filter - Check if text contains prohibited words
