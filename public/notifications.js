@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
     firebase.auth().onAuthStateChanged((user) => {
       if (user) {
         currentUser = user
+        setupProfileUpdateListener()
         setupNotificationListener(user.uid)
       } else {
         // For testing purposes only (remove in production):
@@ -218,7 +219,12 @@ document.addEventListener("DOMContentLoaded", () => {
             actionButtons = `
             <button class="ursac-view-button" onclick="handleMessageNotificationClick('${notif.id}', '${notif.conversationId}', '${notif.userId}', '${notif.messageId || ""}')">View</button>
           `
-          } else if (notif.type === "like" || notif.type === "comment" || notif.type === "reply" || notif.type === "mention") {
+          } else if (
+            notif.type === "like" ||
+            notif.type === "comment" ||
+            notif.type === "reply" ||
+            notif.type === "mention"
+          ) {
             actionButtons = `
             <button class="ursac-view-button" onclick="handlePostNotificationClick('${notif.id}', '${notif.postId}', '${notif.type}', '${notif.commentId || ""}')">View</button>
           `
@@ -238,7 +244,8 @@ document.addEventListener("DOMContentLoaded", () => {
                data-post-id="${notif.postId || ""}"
                data-conversation-id="${notif.conversationId || ""}"
                data-message-id="${notif.messageId || ""}"
-               data-comment-id="${notif.commentId || ""}">
+               data-comment-id="${notif.commentId || ""}"
+               data-user-id="${notif.userId}">
             <div class="ursac-notification-icon">
               ${categoryIcon}
             </div>
@@ -320,43 +327,43 @@ document.addEventListener("DOMContentLoaded", () => {
     const urlParams = new URLSearchParams(window.location.search)
     const highlightPostId = urlParams.get("highlight")
     const highlightCommentId = urlParams.get("comment")
-    
+
     if (highlightPostId) {
       // Find the post element
       const postElement = document.querySelector(`.ursac-post-card[data-post-id="${highlightPostId}"]`)
-      
+
       if (postElement) {
         // Scroll to the post
         postElement.scrollIntoView({ behavior: "smooth", block: "center" })
-        
+
         // Highlight the post
         postElement.classList.add("ursac-post-highlight")
-        
+
         // Remove highlight after animation completes
         setTimeout(() => {
           postElement.classList.remove("ursac-post-highlight")
         }, 2000)
-        
+
         // If there's a specific comment to highlight
         if (highlightCommentId) {
           setTimeout(() => {
             const commentElement = document.querySelector(`.ursac-comment[data-comment-id="${highlightCommentId}"]`)
             if (commentElement) {
               // Expand comments section if it's collapsed
-              const commentsSection = postElement.querySelector('.ursac-post-comments')
-              if (commentsSection && commentsSection.style.display === 'none') {
+              const commentsSection = postElement.querySelector(".ursac-post-comments")
+              if (commentsSection && commentsSection.style.display === "none") {
                 const commentToggle = postElement.querySelector('.ursac-post-stat[data-action="comment"]')
                 if (commentToggle) {
                   commentToggle.click()
                 }
               }
-              
+
               // Scroll to the comment
               commentElement.scrollIntoView({ behavior: "smooth", block: "center" })
-              
+
               // Highlight the comment
               commentElement.classList.add("ursac-comment-highlight")
-              
+
               // Remove highlight after animation completes
               setTimeout(() => {
                 commentElement.classList.remove("ursac-comment-highlight")
@@ -364,7 +371,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           }, 500) // Small delay to ensure comments are loaded
         }
-        
+
         // Clean up the URL
         const newUrl = window.location.pathname
         window.history.replaceState({}, document.title, newUrl)
@@ -373,11 +380,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Expose these functions globally
-  window.handleNotificationClick = function(notificationId, postId) {
+  window.handleNotificationClick = (notificationId, postId) => {
     if (!currentUser) return
 
     // Mark notification as read
-    firebase.database()
+    firebase
+      .database()
       .ref(`notifications/${currentUser.uid}/${notificationId}`)
       .update({ read: true })
       .then(() => {
@@ -389,49 +397,50 @@ document.addEventListener("DOMContentLoaded", () => {
       })
   }
 
-  window.handlePostNotificationClick = function(notificationId, postId, notificationType, commentId) {
+  window.handlePostNotificationClick = (notificationId, postId, notificationType, commentId) => {
     if (!currentUser) return
 
     // Mark notification as read
-    firebase.database()
+    firebase
+      .database()
       .ref(`notifications/${currentUser.uid}/${notificationId}`)
       .update({ read: true })
       .then(() => {
         // If we're already on the homepage
-        if (window.location.pathname === '/homepage' || window.location.pathname === '/') {
+        if (window.location.pathname === "/homepage" || window.location.pathname === "/") {
           // Find the post element
           const postElement = document.querySelector(`.ursac-post-card[data-post-id="${postId}"]`)
-          
+
           if (postElement) {
             // Scroll to the post
             postElement.scrollIntoView({ behavior: "smooth", block: "center" })
-            
+
             // Highlight the post
             postElement.classList.add("ursac-post-highlight")
-            
+
             // Remove highlight after animation completes
             setTimeout(() => {
               postElement.classList.remove("ursac-post-highlight")
             }, 2000)
-            
+
             // If it's a comment notification and we have a comment ID
-            if ((notificationType === 'comment' || notificationType === 'reply') && commentId) {
+            if ((notificationType === "comment" || notificationType === "reply") && commentId) {
               setTimeout(() => {
                 // Expand comments section if it's collapsed
-                const commentsSection = postElement.querySelector('.ursac-post-comments')
-                if (commentsSection && commentsSection.style.display === 'none') {
+                const commentsSection = postElement.querySelector(".ursac-post-comments")
+                if (commentsSection && commentsSection.style.display === "none") {
                   const commentToggle = postElement.querySelector('.ursac-post-stat[data-action="comment"]')
                   if (commentToggle) {
                     commentToggle.click()
                   }
                 }
-                
+
                 // Find and highlight the specific comment
                 const commentElement = document.querySelector(`.ursac-comment[data-comment-id="${commentId}"]`)
                 if (commentElement) {
                   commentElement.scrollIntoView({ behavior: "smooth", block: "center" })
                   commentElement.classList.add("ursac-comment-highlight")
-                  
+
                   setTimeout(() => {
                     commentElement.classList.remove("ursac-comment-highlight")
                   }, 2000)
@@ -440,14 +449,14 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           } else {
             // If post not found on current page, navigate to homepage with parameters
-            window.location.href = commentId 
-              ? `/homepage?highlight=${postId}&comment=${commentId}` 
+            window.location.href = commentId
+              ? `/homepage?highlight=${postId}&comment=${commentId}`
               : `/homepage?highlight=${postId}`
           }
         } else {
           // Navigate to the homepage with parameters
-          window.location.href = commentId 
-            ? `/homepage?highlight=${postId}&comment=${commentId}` 
+          window.location.href = commentId
+            ? `/homepage?highlight=${postId}&comment=${commentId}`
             : `/homepage?highlight=${postId}`
         }
       })
@@ -456,11 +465,12 @@ document.addEventListener("DOMContentLoaded", () => {
       })
   }
 
-  window.handleMessageNotificationClick = function(notificationId, conversationId, userId, messageId) {
+  window.handleMessageNotificationClick = (notificationId, conversationId, userId, messageId) => {
     if (!currentUser) return
 
     // Mark notification as read
-    firebase.database()
+    firebase
+      .database()
       .ref(`notifications/${currentUser.uid}/${notificationId}`)
       .update({ read: true })
       .then(() => {
@@ -479,15 +489,16 @@ document.addEventListener("DOMContentLoaded", () => {
       })
   }
 
-  window.markNotificationAsRead = function(notificationId, event) {
+  window.markNotificationAsRead = (notificationId, event) => {
     if (!currentUser) return
-    
+
     // Stop the click event from bubbling up to the parent
     if (event) {
       event.stopPropagation()
     }
 
-    firebase.database()
+    firebase
+      .database()
       .ref(`notifications/${currentUser.uid}/${notificationId}`)
       .update({ read: true })
       .then(() => {
@@ -500,7 +511,7 @@ document.addEventListener("DOMContentLoaded", () => {
             markReadBtn.remove()
           }
         }
-        
+
         // If we're on the unread filter, we might need to refresh the list
         if (currentFilter === "unread") {
           filterNotifications("unread")
@@ -511,27 +522,28 @@ document.addEventListener("DOMContentLoaded", () => {
       })
   }
 
-  window.markAllNotificationsAsRead = function() {
+  window.markAllNotificationsAsRead = () => {
     if (!currentUser) return
 
     const updates = {}
-    allNotifications.forEach(notif => {
+    allNotifications.forEach((notif) => {
       if (!notif.read) {
         updates[`${notif.id}/read`] = true
       }
     })
-    
+
     if (Object.keys(updates).length === 0) {
       return // No unread notifications
     }
-    
-    firebase.database()
+
+    firebase
+      .database()
       .ref(`notifications/${currentUser.uid}`)
       .update(updates)
       .then(() => {
         // Update UI based on current filter
         filterNotifications(currentFilter)
-        
+
         // Update notification badge
         updateNotificationBadge(0)
       })
@@ -541,7 +553,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Add some CSS for notification badge positioning
-  const style = document.createElement('style')
+  const style = document.createElement("style")
   style.textContent = `
     .ursac-notification-indicator {
       position: relative;
@@ -593,22 +605,22 @@ document.addEventListener("DOMContentLoaded", () => {
   document.head.appendChild(style)
 
   // Make sure all notification bell icons have the proper container
-  document.querySelectorAll('.notification-bell').forEach(bell => {
+  document.querySelectorAll(".notification-bell").forEach((bell) => {
     // If bell is not already in a container with relative positioning
-    if (!bell.parentElement.classList.contains('notification-bell-container')) {
+    if (!bell.parentElement.classList.contains("notification-bell-container")) {
       // Create container
-      const container = document.createElement('div')
-      container.className = 'notification-bell-container'
+      const container = document.createElement("div")
+      container.className = "notification-bell-container"
       // Insert container before bell
       bell.parentNode.insertBefore(container, bell)
       // Move bell into container
       container.appendChild(bell)
-      
+
       // Add badge if not exists
-      if (!container.querySelector('.ursac-notification-badge')) {
-        const badge = document.createElement('span')
-        badge.className = 'ursac-notification-badge'
-        badge.style.display = 'none'
+      if (!container.querySelector(".ursac-notification-badge")) {
+        const badge = document.createElement("span")
+        badge.className = "ursac-notification-badge"
+        badge.style.display = "none"
         container.appendChild(badge)
       }
     }
@@ -632,9 +644,9 @@ document.addEventListener("DOMContentLoaded", () => {
         window.history.replaceState({}, document.title, newUrl)
       }
     }
-    
+
     // Check for post highlight parameters
-    if (window.location.pathname === '/homepage' || window.location.pathname === '/') {
+    if (window.location.pathname === "/homepage" || window.location.pathname === "/") {
       checkForPostHighlight()
     }
   }
@@ -645,3 +657,44 @@ document.addEventListener("DOMContentLoaded", () => {
   // Check URL parameters after a short delay to ensure everything is loaded
   setTimeout(checkUrlParameters, 1000)
 })
+
+// Add this function to the notifications.js file
+function setupProfileUpdateListener() {
+  // Listen for profile updates from other pages
+  document.addEventListener("profileUpdated", (event) => {
+    const userId = event.detail.userId
+
+    // If this is the current user, update the UI
+    if (userId === currentUser?.uid) {
+      loadUserProfile(currentUser)
+    }
+  })
+
+  // Listen for changes to the profileUpdates node in Firebase
+  firebase
+    .database()
+    .ref("profileUpdates")
+    .on("child_changed", (snapshot) => {
+      const userId = snapshot.key
+      const timestamp = snapshot.val()
+
+      // Update notification items from this user
+      const notificationItems = document.querySelectorAll(`.ursac-notification-item[data-user-id="${userId}"]`)
+      if (notificationItems.length > 0) {
+        getUserData(userId).then((userData) => {
+          notificationItems.forEach((item) => {
+            const notificationText = item.querySelector(".ursac-notification-text")
+            if (notificationText) {
+              // Update user name in notification text
+              const userName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+              const oldText = notificationText.innerHTML
+              // Replace the name in the notification text
+              // This is a simple approach - you might need more complex logic depending on your notification format
+              const newText = oldText.replace(/<strong>.*?<\/strong>/, `<strong>${userName}</strong>`)
+              notificationText.innerHTML = newText
+            }
+          })
+        })
+      }
+    })
+}

@@ -280,6 +280,9 @@ document.addEventListener("DOMContentLoaded", () => {
         loadUserProfile(user)
         loadConversations()
         setupMessageEventListeners() // Setup message event listeners
+
+        // Set up profile update listener
+        setupProfileUpdateListener()
       } else {
         console.log("No user authenticated, redirecting to login...")
         // For testing purposes only (remove in production):
@@ -769,7 +772,7 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .catch((error) => {
           console.error("Error uploading attachment:", error)
-          alert("Failed to upload attachment. Please try again.")
+          showModal("Upload Failed", "Failed to upload attachment. Please try again.")
 
           // Hide upload modal
           uploadModal.style.display = "none"
@@ -860,7 +863,7 @@ document.addEventListener("DOMContentLoaded", () => {
       })
       .catch((error) => {
         console.error("Error creating message:", error)
-        alert("Failed to send message. Please try again.")
+        showModal("Message Failed", "Failed to send message. Please try again.")
       })
   }
 
@@ -1109,73 +1112,160 @@ document.addEventListener("DOMContentLoaded", () => {
         return
       }
 
-      // Create storage reference
-      const storageRef = storage.ref()
-      const fileExtension = file.name.split(".").pop().toLowerCase()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExtension}`
-
-      // Choose appropriate folder based on file type
-      let fileRef
-      let fileType
-
-      // Determine file type based on MIME type and extension
-      if (file.type.startsWith("image/") || fileExtension === "gif") {
-        fileRef = storageRef.child(`messages/images/${fileName}`)
-        fileType = "image"
-      } else if (file.type.startsWith("video/")) {
-        fileRef = storageRef.child(`messages/videos/${fileName}`)
-        fileType = "video"
-      } else {
-        fileRef = storageRef.child(`messages/files/${fileName}`)
-        fileType = "file"
-      }
-
       // Show upload modal with initial state
       uploadModal.style.display = "flex"
       uploadProgress.style.width = "0%"
       uploadStatus.textContent = "0%"
 
-      // Set metadata with CORS settings
-      const metadata = {
-        contentType: file.type,
-        customMetadata: {
-          "Access-Control-Allow-Origin": "*",
-        },
+      // Determine file type based on MIME type and extension
+      const fileExtension = file.name.split(".").pop().toLowerCase()
+      let fileType
+
+      if (file.type.startsWith("image/") || fileExtension === "gif") {
+        fileType = "image"
+      } else if (file.type.startsWith("video/")) {
+        fileType = "video"
+      } else {
+        fileType = "file"
       }
 
-      // Upload the file with metadata
-      const uploadTask = fileRef.put(file, metadata)
+      // For images, use ImgBB API
+      if (fileType === "image") {
+        // First, convert the file to base64
+        const reader = new FileReader()
+        reader.readAsDataURL(file)
+        reader.onload = () => {
+          const base64data = reader.result.split(",")[1]
 
-      // Monitor upload progress
-      uploadTask.on(
-        "state_changed",
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-          uploadProgress.style.width = progress + "%"
-          uploadStatus.textContent = Math.round(progress) + "%"
-        },
-        (error) => {
-          console.error("Upload error:", error)
-          reject(error)
-        },
-        () => {
-          // Upload completed successfully
-          uploadTask.snapshot.ref
-            .getDownloadURL()
-            .then((downloadURL) => {
+          // Get ImgBB API key
+          const apiKey = "fa517d5bab87e31f661cb28d7de365ba" // Using the ImgBB API key
+
+          // Create form data for the API request
+          const formData = new FormData()
+          formData.append("image", base64data)
+
+          // Update progress to show we're starting the upload
+          if (uploadProgress) uploadProgress.style.width = "10%"
+          if (uploadStatus) uploadStatus.textContent = "Uploading to ImgBB..."
+
+          // Make the API request to ImgBB
+          fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+            method: "POST",
+            body: formData,
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`ImgBB API error: ${response.status}`)
+              }
+              return response.json()
+            })
+            .then((data) => {
+              // Update progress to show completion
+              if (uploadProgress) uploadProgress.style.width = "100%"
+              if (uploadStatus) uploadStatus.textContent = "Upload complete!"
+
+              // Store image metadata (without using Firestore FieldValue)
+              const timestamp = Date.now()
+
+              // Add to Firestore images collection if Firestore is available
+              if (firebase.firestore) {
+                const imageData = {
+                  url: data.data.url,
+                  display_url: data.data.display_url,
+                  delete_url: data.data.delete_url,
+                  timestamp: timestamp,
+                }
+
+                firebase
+                  .firestore()
+                  .collection("images")
+                  .add(imageData)
+                  .then((docRef) => {
+                    console.log("Image URL saved to Firestore with ID:", docRef.id)
+                  })
+                  .catch((error) => {
+                    console.error("Error saving image URL to Firestore:", error)
+                  })
+              } else {
+                console.log("Firestore not available, skipping image metadata storage")
+              }
+
+              // Resolve with media data
               resolve({
-                url: downloadURL,
-                type: fileType,
+                url: data.data.url,
+                type: "image",
                 name: file.name,
                 size: formatFileSize(file.size),
               })
             })
             .catch((error) => {
-              console.error("Error getting download URL:", error)
+              console.error("ImgBB upload failed:", error)
+              if (uploadModal) uploadModal.style.display = "none"
               reject(error)
             })
-        },
-      )
+        }
+
+        reader.onerror = (error) => {
+          console.error("Error reading file:", error)
+          if (uploadModal) uploadModal.style.display = "none"
+          reject(error)
+        }
+      } else {
+        // For non-image files, use Firebase Storage
+        // Create storage reference
+        const storageRef = storage.ref()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExtension}`
+
+        // Choose appropriate folder based on file type
+        let fileRef
+        if (fileType === "video") {
+          fileRef = storageRef.child(`messages/videos/${fileName}`)
+        } else {
+          fileRef = storageRef.child(`messages/files/${fileName}`)
+        }
+
+        // Set metadata with CORS settings
+        const metadata = {
+          contentType: file.type,
+          customMetadata: {
+            "Access-Control-Allow-Origin": "*",
+          },
+        }
+
+        // Upload the file with metadata
+        const uploadTask = fileRef.put(file, metadata)
+
+        // Monitor upload progress
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+            uploadProgress.style.width = progress + "%"
+            uploadStatus.textContent = Math.round(progress) + "%"
+          },
+          (error) => {
+            console.error("Upload error:", error)
+            reject(error)
+          },
+          () => {
+            // Upload completed successfully
+            uploadTask.snapshot.ref
+              .getDownloadURL()
+              .then((downloadURL) => {
+                resolve({
+                  url: downloadURL,
+                  type: fileType,
+                  name: file.name,
+                  size: formatFileSize(file.size),
+                })
+              })
+              .catch((error) => {
+                console.error("Error getting download URL:", error)
+                reject(error)
+              })
+          },
+        )
+      }
     })
   }
 
@@ -1362,7 +1452,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (sendNewMessage) {
       sendNewMessage.addEventListener("click", () => {
         if (!selectedRecipientId) {
-          alert("Please select a recipient")
+          showModal("Recipient Required", "Please select a recipient")
           return
         }
 
@@ -1391,7 +1481,7 @@ document.addEventListener("DOMContentLoaded", () => {
           })
           .catch((error) => {
             console.error("Error creating conversation:", error)
-            alert("Failed to create conversation. Please try again.")
+            showModal("Conversation Failed", "Failed to create conversation. Please try again.")
           })
       })
     }
@@ -1782,4 +1872,129 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize the app
   init()
+
+  // Add this function to the messages.js file
+  function setupProfileUpdateListener() {
+    // Listen for profile updates from other pages
+    document.addEventListener("profileUpdated", (event) => {
+      const userId = event.detail.userId
+
+      // If this is the current user, update the UI
+      if (userId === currentUser?.uid) {
+        loadUserProfile(currentUser)
+      }
+    })
+
+    // Listen for changes to the profileUpdates node in Firebase
+    firebase
+      .database()
+      .ref("profileUpdates")
+      .on("child_changed", (snapshot) => {
+        const userId = snapshot.key
+        const timestamp = snapshot.val()
+
+        // If this is the selected recipient, update the conversation header
+        if (userId === selectedRecipientId) {
+          getUserData(userId).then((userData) => {
+            // Update conversation header
+            const userInitials = getInitials(userData.firstName, userData.lastName)
+            const userName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+
+            document.getElementById("conversation-avatar-text").textContent = userInitials
+            document.getElementById("conversation-name").textContent = userName
+          })
+        }
+
+        // Update conversation list items
+        const conversationItems = document.querySelectorAll(`.ursac-conversation-item[data-user-id="${userId}"]`)
+        if (conversationItems.length > 0) {
+          getUserData(userId).then((userData) => {
+            conversationItems.forEach((item) => {
+              const userInitials = getInitials(userData.firstName, userData.lastName)
+              const userName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+
+              const avatarElement = item.querySelector(".ursac-conversation-avatar span")
+              if (avatarElement) {
+                avatarElement.textContent = userInitials
+              }
+
+              const nameElement = item.querySelector(".ursac-conversation-name")
+              if (nameElement) {
+                nameElement.textContent = userName
+              }
+            })
+          })
+        }
+
+        // Update recipient list items
+        const recipientItems = document.querySelectorAll(`.ursac-recipient-item[data-user-id="${userId}"]`)
+        if (recipientItems.length > 0) {
+          getUserData(userId).then((userData) => {
+            recipientItems.forEach((item) => {
+              const userInitials = getInitials(userData.firstName, userData.lastName)
+              const userName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+
+              const avatarElement = item.querySelector(".ursac-recipient-avatar span")
+              if (avatarElement) {
+                avatarElement.textContent = userInitials
+              }
+
+              const nameElement = item.querySelector(".ursac-recipient-name")
+              if (nameElement) {
+                nameElement.textContent = userName
+              }
+            })
+          })
+        }
+      })
+  }
+
+  // Generic modal function
+  function showModal(title, message) {
+    // Create modal if it doesn't exist
+    let modalElement = document.getElementById("generic-modal")
+
+    if (!modalElement) {
+      const modalHTML = `
+        <div class="ursac-modal" id="generic-modal">
+          <div class="ursac-modal-content">
+            <div class="ursac-modal-header">
+              <h3 id="modal-title"></h3>
+              <button class="ursac-modal-close" id="close-generic-modal">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div class="ursac-modal-body">
+              <p id="modal-message"></p>
+            </div>
+            <div class="ursac-modal-footer">
+              <button class="ursac-button ursac-button-primary" id="acknowledge-generic">I Understand</button>
+            </div>
+          </div>
+        </div>
+      `
+
+      const modalContainer = document.createElement("div")
+      modalContainer.innerHTML = modalHTML
+      document.body.appendChild(modalContainer.firstElementChild)
+
+      modalElement = document.getElementById("generic-modal")
+
+      // Add event listeners
+      document.getElementById("close-generic-modal").addEventListener("click", () => {
+        modalElement.style.display = "none"
+      })
+
+      document.getElementById("acknowledge-generic").addEventListener("click", () => {
+        modalElement.style.display = "none"
+      })
+    }
+
+    // Update content
+    document.getElementById("modal-title").textContent = title
+    document.getElementById("modal-message").textContent = message
+
+    // Show modal
+    modalElement.style.display = "flex"
+  }
 })
