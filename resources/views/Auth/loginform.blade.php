@@ -359,10 +359,10 @@
           }
         );
       } else {
-        console.error('Login failed:', result.error);
+        console.error('Login failed: Incorrect credentials ');
         showModal(
-          'Login failed: ' + result.error, 
-          'Error', 
+          'Login failed: Incorrect credentials',
+          'Error',
           'error'
         );
         showError(emailGroup, true);
