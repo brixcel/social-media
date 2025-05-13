@@ -20,12 +20,14 @@
 
   <div class="ursac-container">
     <!-- Left Sidebar -->
+    <div class="ursac-container">
+    <!-- Left Sidebar -->
     <div class="ursac-sidebar-left">
       <div class="ursac-header-logo">
         <a href="#">URSAC Hub</a>
       </div>
       <div class="ursac-sidebar-menu">
-        <a href="{{ route('homepage') }}" class="ursac-menu-item">
+        <a href="{{ route('homepage') }}" class="ursac-menu-item ursac-menu-active">
           <i class="fas fa-home"></i>
           <span>Home</span>
         </a>
@@ -39,23 +41,17 @@
           <i class="fas fa-comment"></i>
           <span>Messages</span>
         </a>
-        <a href="#" class="ursac-menu-item">
-          <i class="fas fa-users"></i>
-          <span>Organizations</span>
-        </a>
-        <a href="#" class="ursac-menu-item">
+
+        <a href="{{ route('profile') }}" class="ursac-menu-item">
           <i class="fas fa-user"></i>
           <span>Profile</span>
         </a>
-        <a href="#" class="ursac-menu-item">
-          <i class="fas fa-cog"></i>
-          <span>Settings</span>
-        </a>
+        
         
         <!-- Post Button (After Settings) -->
         <button class="ursac-sidebar-post-btn" id="open-post-modal">
           <i class="fas fa-plus"></i>
-          <span></span>
+          <span>Post</span>
         </button>
         
         <!-- User Profile Button -->
@@ -133,7 +129,7 @@
         </div>
     </div>
     <!-- Right Sidebar -->
-      <div class="ursac-sidebar-right">
+       <div class="ursac-sidebar-right">
       <!-- Forums Section -->
       <div class="ursac-sidebar-section" id="forum-section">
         <h3 class="ursac-sidebar-title">
@@ -142,80 +138,24 @@
         <i class="fas fa-plus-circle" style="color: var(--primary-color); font-size: 1.2em;"></i>
         </button>
         </h3>
-        <div id="addForumModal" class="ursac-modal">
-          <div class="ursac-modal-content">
-            <span id="closeModalBtn" class="ursac-close">&times;</span>
-            <a href="{{ route('join') }}" class="ursac-button ursac-button-primary" id="join-forum-btn">
-              <i class="fas fa-sign-in-alt"></i>
-              <span>Join a Forum</span>
-            </a>
-            <a href="{{ route('create') }}" class="ursac-button ursac-button-secondary" id="create-forum-btn">
+        <div id="addForumModal" class="custom-modal">
+          <div class="custom-modal-box">
+            <span id="closeModalBtn" class="custom-close">&times;</span>
+              <a href="{{ route('join') }}" class="custom-button custom-button-primary" id="join-forum-btn">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>Join a Forum</span>
+              </a>
+            <a href="{{ route('create') }}" class="custom-button custom-button-secondary" id="create-forum-btn">
               <i class="fas fa-plus-circle"></i>
               <span>Create Your Forum</span>
             </a>
-            <a href="{{ route('view') }}" class="ursac-button ursac-button-tertiary" id="view-forum-btn">
-              <i class="fas fa-eye"></i>
-              <span>View Your Forum</span>
-            </a>
           </div>
         </div>
         
-        <div class="ursac-forum-list"></div>
+        <div class="ursac-forum-list">
+        </div>
         
-        <!-- Events Section -->
-        <div class="ursac-sidebar-section">
-          <h3 class="ursac-sidebar-title">Upcoming Events</h3>
-          <div class="ursac-event-list">
-            <div class="ursac-event-item">
-              <div class="ursac-event-date">
-                <div class="ursac-event-month">SEP</div>
-                <div class="ursac-event-day">15</div>
-              </div>
-              <div class="ursac-event-info">
-                <div class="ursac-event-name">Freshmen Orientation</div>
-                <div class="ursac-event-location">Main Auditorium</div>
-              </div>
-            </div>
-            <div class="ursac-event-item">
-              <div class="ursac-event-date">
-                <div class="ursac-event-month">OCT</div>
-                <div class="ursac-event-day">05</div>
-              </div>
-              <div class="ursac-event-info">
-                <div class="ursac-event-name">Tech Symposium 2023</div>
-                <div class="ursac-event-location">Engineering Building</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      
-      <!-- Friends Section -->
-      <div class="ursac-sidebar-section">
-        <h3 class="ursac-sidebar-title">Friends</h3>
-        <div class="ursac-friend-list" id="friend-list">
-          <!-- Friends will be loaded dynamically -->
-          <div class="ursac-friend-item">
-            <div class="ursac-friend-avatar">
-              <div class="ursac-friend-status ursac-status-online"></div>
-            </div>
-            <div class="ursac-friend-info">
-              <div class="ursac-friend-name">Maria Santos</div>
-              <div class="ursac-friend-course">BS - IT</div>
-            </div>
-          </div>
-          <div class="ursac-friend-item">
-            <div class="ursac-friend-avatar">
-              <div class="ursac-friend-status ursac-status-offline"></div>
-            </div>
-            <div class="ursac-friend-info">
-              <div class="ursac-friend-name">John Reyes</div>
-              <div class="ursac-friend-course">BS - CpE</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+       
 
   
 

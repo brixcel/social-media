@@ -2364,76 +2364,89 @@ window.showModal = showModal
 document.addEventListener("DOMContentLoaded", () => {
   const style = document.createElement("style")
   style.textContent = `
-    .ursac-modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: rgba(0, 0, 0, 0.5);
-      z-index: 2000;
-      justify-content: center;
-      align-items: center;
-    }
+   .custom-modal {
+  display: none; /* Hidden by default */
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+}
 
-    .ursac-modal-content {
-      background-color: white;
-      border-radius: 8px;
-      max-width: 400px;
-      width: 100%;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      overflow: hidden;
-    }
+/* Modal box */
+.custom-modal-box {
+  background-color: #fff;
+  margin: 10% auto;
+  padding: 20px 30px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 400px;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.3s ease-in-out;
+}
 
-    .ursac-modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 15px 20px;
-      border-bottom: 1px solid #eee;
-    }
+/* Close button */
+.custom-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 28px;
+  font-weight: bold;
+  color: #888;
+  cursor: pointer;
+}
 
-    .ursac-modal-header h3 {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 600;
-    }
+.custom-close:hover {
+  color: #000;
+}
 
-    .ursac-modal-close {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 16px;
-      color: #777;
-    }
+/* Button */
+.custom-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  padding: 10px 16px;
+  font-size: 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: 0.2s ease-in-out;
+  gap: 8px;
+}
 
-    .ursac-modal-body {
-      padding: 20px;
-    }
+.custom-button-primary {
+  color: #0056b3;
+  align:items: center;
+  border: none;
+}
 
-    .ursac-modal-footer {
-      padding: 15px 20px;
-      border-top: 1px solid #eee;
-      text-align: right;
-    }
 
-    .ursac-button {
-      padding: 8px 16px;
-      border-radius: 4px;
-      border: none;
-      cursor: pointer;
-      font-weight: 500;
-    }
 
-    .ursac-button-primary {
-      background-color: #4a76a8;
-      color: white;
-    }
+.custom-button-primary:hover {
+  background-color: #0056b3;
+  color: #fff;
+}
 
-    .ursac-button-primary:hover {
-      background-color: #3d6593;
-    }
+.custom-button-secondary {
+  color: #0056b3;
+}
+
+.custom-button-secondary:hover {
+  background-color: #0056b3;
+  color: #fff;
+}
+
+
+
+/* Optional fade-in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
   `
   document.head.appendChild(style)
 })
