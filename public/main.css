@@ -1505,12 +1505,9 @@ img, video {
     border-radius: 8px;
     background-color: var(--white);
     transition: background-color 0.2s;
-    cursor: pointer;
+    
 }
 
-.ursac-forum-item:hover {
-    background-color: var(--forum-bg);
-}
 
 .ursac-forum-icon {
     width: 40px;

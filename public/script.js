@@ -3012,11 +3012,6 @@ loadJoinableForums();
 // firebase.initializeApp(firebaseConfig);
 
 // Function to redirect based on Firebase data
-function redirectToForum(forumId) {
-  // Firebase check (optional)
-  const forumUrl = `/view/${forumId}`; // Direct URL
-  window.location.href = forumUrl;
-}
 
 
 // Example usag // Pass the forum ID dynamically
