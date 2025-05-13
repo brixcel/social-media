@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="main.css">
+  
 </head>
 <body>
   <div class="ursac-container">
@@ -31,18 +32,11 @@
           <i class="fas fa-comment"></i>
           <span>Messages</span>
         </a>
-        <a href="#" class="ursac-menu-item">
-          <i class="fas fa-users"></i>
-          <span>Organizations</span>
-        </a>
-        <a href="#" class="ursac-menu-item">
+        <a href="{{ route('profile') }}" class="ursac-menu-item">
           <i class="fas fa-user"></i>
           <span>Profile</span>
         </a>
-        <a href="#" class="ursac-menu-item">
-          <i class="fas fa-cog"></i>
-          <span>Settings</span>
-        </a>
+        
         
         <!-- Post Button (After Settings) -->
         <button class="ursac-sidebar-post-btn" id="open-post-modal">
@@ -85,6 +79,13 @@
       <div class="ursac-messages-container">
         <!-- Conversations List -->
         <div class="ursac-conversations-list" id="conversations-list">
+          <!-- New Message Button at the top of conversations list -->
+          <div class="ursac-new-conversation-button">
+            <button class="ursac-new-message-btn" id="new-message-btn">
+              <i class="fas fa-plus"></i> New Message
+            </button>
+          </div>
+          
           <!-- Loading state -->
           <div class="ursac-loading-state" id="loading-conversations">
             <i class="fas fa-spinner fa-spin"></i>
@@ -95,7 +96,7 @@
           <div class="ursac-empty-state" id="empty-conversations" style="display: none;">
             <i class="fas fa-comments"></i>
             <p>No conversations yet</p>
-            <button class="ursac-new-message-btn" id="new-message-btn">
+            <button class="ursac-new-message-btn" id="new-message-btn-empty">
               <i class="fas fa-plus"></i> Start a new conversation
             </button>
           </div>
@@ -144,49 +145,6 @@
           <!-- Messages area -->
           <div class="ursac-messages-area" id="messages-area" style="display: none;">
             <!-- Messages will be added here dynamically -->
-            <div class="ursac-message-date">Today</div>
-            
-            <div class="ursac-message ursac-message-received">
-              <div class="ursac-message-avatar">
-                <span>JS</span>
-              </div>
-              <div class="ursac-message-content">
-                <div class="ursac-message-bubble">
-                  Hi there! How are you doing today?
-                </div>
-                <div class="ursac-message-time">10:30 AM</div>
-              </div>
-            </div>
-            
-            <div class="ursac-message ursac-message-sent">
-              <div class="ursac-message-content">
-                <div class="ursac-message-bubble">
-                  I'm doing great, thanks for asking! How about you?
-                </div>
-                <div class="ursac-message-time">10:32 AM</div>
-              </div>
-            </div>
-            
-            <div class="ursac-message ursac-message-received">
-              <div class="ursac-message-avatar">
-                <span>JS</span>
-              </div>
-              <div class="ursac-message-content">
-                <div class="ursac-message-bubble">
-                  I'm good too. Just wanted to check in about the project. Do you have any updates?
-                </div>
-                <div class="ursac-message-time">10:35 AM</div>
-              </div>
-            </div>
-            
-            <div class="ursac-message ursac-message-sent">
-              <div class="ursac-message-content">
-                <div class="ursac-message-bubble">
-                  Yes, I've completed the first phase. I'll send you the documents later today.
-                </div>
-                <div class="ursac-message-time">10:36 AM</div>
-              </div>
-            </div>
           </div>
           
           <!-- Message input area -->
@@ -233,38 +191,16 @@
             </a>
           </div>
         </div>
+<<<<<<< HEAD
         
         <div class="ursac-forum-list"">
         </div>
-      
-      <!-- Friends Section -->
-      <div class="ursac-sidebar-section">
-        <h3 class="ursac-sidebar-title">Friends</h3>
-        <div class="ursac-friend-list" id="friend-list">
-          <!-- Friends will be loaded dynamically -->
-          <div class="ursac-friend-item">
-            <div class="ursac-friend-avatar">
-              <div class="ursac-friend-status ursac-status-online"></div>
-            </div>
-            <div class="ursac-friend-info">
-              <div class="ursac-friend-name">Maria Santos</div>
-              <div class="ursac-friend-course">BS - IT</div>
-            </div>
-          </div>
-          <div class="ursac-friend-item">
-            <div class="ursac-friend-avatar">
-              <div class="ursac-friend-status ursac-status-offline"></div>
-            </div>
-            <div class="ursac-friend-info">
-              <div class="ursac-friend-name">John Reyes</div>
-              <div class="ursac-friend-course">BS - CpE</div>
-            </div>
-          </div>
-        </div>
+=======
       </div>
-    </div>
-  </div>
-
+      
+>>>>>>> 466e93e0987f5db1fba918d3f155c0d7d54ea531
+      
+      
   <!-- New Message Modal -->
   <div class="ursac-modal" id="new-message-modal">
     <div class="ursac-modal-content">
@@ -325,6 +261,17 @@
     
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
+
+      document.addEventListener('click', function (e) {
+    const profileBtn = document.getElementById('user-profile-btn');
+    const dropdown = document.getElementById('user-profile-dropdown');
+    
+    if (profileBtn.contains(e.target)) {
+      dropdown.classList.toggle('show');
+    } else if (!dropdown.contains(e.target)) {
+      dropdown.classList.remove('show');
+    }
+  });
   </script>
   <script src="script.js"></script>
   <script src="notifications.js"></script>

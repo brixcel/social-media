@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\VerificationController;
+use App\Http\Controllers\Admin\UserController;
 
 
 // Auth routes
@@ -39,9 +40,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/pages', [PageController::class, 'index'])->name('pages');
     Route::get('/posts/create', [PostController::class, 'create'])->name('posts.create');
     Route::post('/posts', [PostController::class, 'store'])->name('posts.store');
-    Route::get('/posts/{id}/edit', [PostController::class, 'edit'])->name('posts.edit');
-    Route::put('/posts/{id}', [PostController::class, 'update'])->name('posts.update');
-    Route::delete('/posts/{id}', [PostController::class, 'destroy'])->name('posts.destroy');
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::post('/users/{id}/ban', [UserController::class, 'banUser'])->name('users.ban');
+    Route::post('/users/{id}/unban', [UserController::class, 'unbanUser'])->name('users.unban');
+    Route::delete('/users/{id}', [UserController::class, 'deleteUser'])->name('users.delete');
 });
 // Public routes
 Route::get('/', function() {

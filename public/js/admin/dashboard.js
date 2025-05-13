@@ -80,9 +80,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 ${renderUserInfo(userData, post.userId)}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <a href="/admin/posts/${postId}/edit" class="text-indigo-600 hover:text-indigo-900 mr-3">
-                    <i class="fas fa-edit mr-1"></i>Edit
-                </a>
                 <button onclick="deletePost('${postId}')" class="text-red-600 hover:text-red-900">
                     <i class="fas fa-trash mr-1"></i>Delete
                 </button>

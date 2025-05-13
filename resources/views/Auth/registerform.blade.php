@@ -25,6 +25,72 @@
     };
     firebase.initializeApp(firebaseConfig);
   </script>
+  <style>
+    /* Modal styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-container {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      padding: 24px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .modal-title {
+      font-weight: 600;
+      font-size: 18px;
+      margin-bottom: 16px;
+      color: #333;
+    }
+
+    .modal-message {
+      margin-bottom: 20px;
+      line-height: 1.5;
+      color: #555;
+    }
+
+    .modal-button {
+      background-color: #4361ee;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      font-weight: 600;
+    }
+
+    .modal-button:hover {
+      background-color: #3a56d4;
+    }
+
+    /* Show modal with fade-in animation */
+    .modal-overlay.active {
+      display: flex;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  </style>
 </head>
 <body>
   <div class="ursac-auth-bg">
@@ -78,6 +144,16 @@
       </p>
     </div>
   </div>
+
+  <!-- Modal Dialog -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-title" id="modal-title">Notice</div>
+      <div class="modal-message" id="modal-message"></div>
+      <button class="modal-button" id="modal-button">OK</button>
+    </div>
+  </div>
+
   <script>
     // Step navigation
     const step1Form = document.getElementById('step1-form');
@@ -88,8 +164,29 @@
     const resendLinkBtn = document.getElementById('resend-link');
     const verifyEmailSpan = document.getElementById('verify-email');
 
+    // Modal elements
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalTitle = document.getElementById('modal-title');
+    const modalMessage = document.getElementById('modal-message');
+    const modalButton = document.getElementById('modal-button');
+
     let formData = {};
     let currentUser = null;
+
+    // Show modal function (replaces alert)
+    function showModal(message, title = 'Notice') {
+      modalTitle.textContent = title;
+      modalMessage.textContent = message;
+      modalOverlay.classList.add('active');
+      
+      // Return a promise that resolves when the modal is closed
+      return new Promise((resolve) => {
+        modalButton.onclick = () => {
+          modalOverlay.classList.remove('active');
+          resolve();
+        };
+      });
+    }
 
     // Step 1: Next
     nextBtn.addEventListener('click', function() {
@@ -111,7 +208,7 @@
         const confirmPassword = document.getElementById('confirm-password').value;
         
         if (password !== confirmPassword) {
-          alert('Passwords do not match!');
+          await showModal('Passwords do not match!', 'Password Error');
           return;
         }
         
@@ -129,7 +226,7 @@
           .once('value');
 
         if (idSnapshot.exists()) {
-          alert('This Student ID is already registered. Please use another one.');
+          await showModal('This Student ID is already registered. Please use another one.', 'Registration Error');
           submitBtn.disabled = false;
           return;
         }
@@ -179,11 +276,11 @@
         step2Form.classList.remove('active');
         step3Verification.classList.add('active');
         
-        alert('Verification email sent! Please check your inbox and verify your email address.');
+        await showModal('Verification email sent! Please check your inbox and verify your email address.', 'Success');
 
       } catch (error) {
         console.error('Registration error:', error);
-        alert('Registration failed: ' + error.message);
+        await showModal('Registration failed: ' + error.message, 'Registration Error');
         submitBtn.disabled = false;
       }
     });
@@ -202,10 +299,10 @@
           url: window.location.origin + '/login'
         });
         
-        alert('Verification email resent! Please check your inbox.');
+        await showModal('Verification email resent! Please check your inbox.', 'Email Sent');
       } catch (error) {
         console.error('Resend verification error:', error);
-        alert('Failed to resend verification email: ' + error.message);
+        await showModal('Failed to resend verification email: ' + error.message, 'Error');
       }
     });
   </script>
