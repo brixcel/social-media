@@ -2775,138 +2775,235 @@ function highlightNewPosts() {
   })
 }
 
+function highlightButton(button) {
+    // Remove highlight from all buttons
+    const buttons = document.querySelectorAll('[data-approval]');
+    buttons.forEach(btn => btn.classList.remove('highlighted'));
+    button.classList.add('highlighted');
+    console.log("JS file is connected!");
+    console.log("Button clicked:", button);
+}
+
 // Call this function after posts are loaded
 document.addEventListener("DOMContentLoaded", () => {
   // Wait for posts to load, then highlight new ones
-  setTimeout(highlightNewPosts, 2000)
-})
+  setTimeout(highlightNewPosts, 2000);
+});
 
-// Generic modal function to replace alerts
-// function showModal(title, message) {
-//   // Create modal if it doesn't exist
-//   let modalElement = document.getElementById("generic-modal")
 
-//   if (!modalElement) {
-//     const modalHTML = `
-//       <div class="ursac-modal" id="generic-modal">
-//         <div class="ursac-modal-content">
-//           <div class="ursac-modal-header">
-//             <h3 id="modal-title"></h3>
-//             <button class="ursac-modal-close" id="close-generic-modal">
-//               <i class="fas fa-times"></i>
-//             </button>
-//           </div>
-//           <div class="ursac-modal-body">
-//             <p id="modal-message"></p>
-//           </div>
-//           <div class="ursac-modal-footer">
-//             <button class="ursac-button ursac-button-primary" id="acknowledge-modal">OK</button>
-//           </div>
-//         </div>
-//       </div>
-//     `
+document.addEventListener('DOMContentLoaded', function () {
+  const forumListContainer = document.querySelector('.ursac-forum-list');
 
-//     const modalContainer = document.createElement("div")
-//     modalContainer.innerHTML = modalHTML
-//     document.body.appendChild(modalContainer.firstElementChild)
+  // Inject CSS styles directly
+  const style = document.createElement('style');
+  document.head.appendChild(style);
 
-//     modalElement = document.getElementById("generic-modal")
+  // Function to display forums the user has joined
+  function displayUserForums(user) {
+    const forumsRef = firebase.database().ref('forums');
+     const forumListRoute = "{{ route('view', ['forum' => '']) }}";
 
-//     // Add event listeners
-//     document.getElementById("close-generic-modal").addEventListener("click", () => {
-//       modalElement.style.display = "none"
-//     })
+    forumsRef.once('value')
+      .then(snapshot => {
+        const joinedForums = [];
 
-//     document.getElementById("acknowledge-modal").addEventListener("click", () => {
-//       modalElement.style.display = "none"
-//     })
-//   }
+        snapshot.forEach(forumSnap => {
+          const forumData = forumSnap.val();
+          if (forumSnap.child('members').hasChild(user.uid)) {
+            joinedForums.push({
+              id: forumSnap.key,
+              name: forumData.name || 'Unnamed Forum'
+            });
+          }
+        });
 
-//   // Update modal content
-//   document.getElementById("modal-title").textContent = title
-//   document.getElementById("modal-message").textContent = message
+        if (forumListContainer) {
+          forumListContainer.innerHTML = joinedForums.length > 0
+            ? joinedForums.map(forum => `
+                <div class="ursac-forum-item" onclick="redirectToForum('${forum.id}')">
+                  <h3>${forum.name}</h3>
+                </div>
+              `).join('')
+            : '<p>You have not joined any forums yet.</p>';
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching forums:', error);
+        if (forumListContainer) {
+          forumListContainer.innerHTML = '<p>Failed to load forums. Please try again later.</p>';
+        }
+      });
+  }
 
-//   // Show modal
-//   modalElement.style.display = "flex"
-// }
+  // Check auth state and then display joined forums
+  firebase.auth().onAuthStateChanged(user => {
+    if (user) {
+      displayUserForums(user);
+    } else if (forumListContainer) {
+      forumListContainer.innerHTML = '<p>Please log in to view your forums.</p>';
+    }
+  });
+});
+  // Wait until the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', function () {
+    // Get references to the necessary elements
+    const openBtn = document.getElementById('add-forum-btn');
+    const modal = document.getElementById('addForumModal');
+    const closeBtn = document.getElementById('closeModalBtn');
 
-// Make showModal available globally
-// window.showModal = showModal
-
-// Add CSS for the modal
-document.addEventListener("DOMContentLoaded", () => {
-  const style = document.createElement("style")
-  style.textContent = `
-    .ursac-modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: rgba(0, 0, 0, 0.5);
-      z-index: 2000;
-      justify-content: center;
-      align-items: center;
+    // Open modal when add-forum button is clicked
+    if (openBtn) {
+      openBtn.addEventListener('click', function () {
+        console.log("Add Forum button clicked");
+        if (modal) {
+          modal.style.display = 'block';
+        }
+      });
     }
 
-    .ursac-modal-content {
-      background-color: white;
-      border-radius: 8px;
-      max-width: 400px;
-      width: 100%;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      overflow: hidden;
+    // Close modal when X is clicked
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function () {
+        if (modal) {
+          modal.style.display = 'none';
+        }
+      });
     }
 
-    .ursac-modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 15px 20px;
-      border-bottom: 1px solid #eee;
+    // Close modal when clicking outside the modal content
+    window.addEventListener('click', function (event) {
+      if (event.target === modal) {
+        if (modal) {
+          modal.style.display = 'none';
+        }
+      }
+    });
+
+    // Inject CSS for the modal
+    const styles = `
+      /* Modal backdrop */
+      .ursac-modal {
+        display: none; /* Hidden by default */
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto; /* Enable scroll if needed */
+        background-color: rgba(0, 0, 0, 0.6); /* Dark semi-transparent background */
+      }
+
+      /* Modal content box */
+      .ursac-modal-content {
+        background-color: #fff;
+        margin: auto;
+        top: 20%;
+        position: relative;
+        transform: translateY(20%);
+        padding: 25px 30px;
+        border-radius: 12px;
+        width: 95%;
+        max-width: 400px;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+        animation: fadeIn 0.3s ease-out;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+      
+      /* Close button (X) */
+      .ursac-close {
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        font-size: 24px;
+        font-weight: bold;
+        color: #888;
+        cursor: pointer;
+      }
+
+      .ursac-close:hover {
+        color: #000;
+      }
+
+      /* Simple fade-in animation */
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    `;
+
+    // Create a style element and append to the head
+    const styleSheet = document.createElement("style");
+    styleSheet.type = "text/css";
+    styleSheet.innerText = styles;
+    document.head.appendChild(styleSheet);
+  });
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+// ✅ Auth check before calling your function
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    console.log("User is logged in:", user.uid);
+    loadJoinableForums(user);
+  } else {
+    console.log("No user is signed in.");
+  }
+});
+
+
+function loadJoinableForums(user) {
+  const userId = user.uid;
+  const forumsRef = ref(db, 'forums');
+
+  onValue(forumsRef, (snapshot) => {
+    const forums = snapshot.val();
+    const joinableForums = [];
+
+    for (const forumId in forums) {
+      const forum = forums[forumId];
+      const members = forum.members || {};
+
+      // If user is NOT a member of this forum, show it in Join tab
+      if (!members.hasOwnProperty(userId)) {
+        joinableForums.push({
+          id: forumId,
+          ...forum
+        });
+      }
     }
 
-    .ursac-modal-header h3 {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 600;
-    }
+    displayJoinableForums(joinableForums);
+  });
+}
 
-    .ursac-modal-close {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 16px;
-      color: #777;
-    }
+// Sample function to render joinable forums
+function displayJoinableForums(forums) {
+  const forumList = document.getElementById('joinable-forums');
+  forumList.innerHTML = '';
 
-    .ursac-modal-body {
-      padding: 20px;
-    }
+  forums.forEach(forum => {
+    const item = document.createElement('div');
+    item.textContent = `${forum.description}`;
+    forumList.appendChild(item);
+  });
+}
 
-    .ursac-modal-footer {
-      padding: 15px 20px;
-      border-top: 1px solid #eee;
-      text-align: right;
-    }
+// Call this on page load
+loadJoinableForums();
 
-    .ursac-button {
-      padding: 8px 16px;
-      border-radius: 4px;
-      border: none;
-      cursor: pointer;
-      font-weight: 500;
-    }
 
-    .ursac-button-primary {
-      background-color: #4a76a8;
-      color: white;
-    }
+// // Initialize Firebase (if not already done)
+// firebase.initializeApp(firebaseConfig);
 
-    .ursac-button-primary:hover {
-      background-color: #3d6593;
-    }
-  `
-  document.head.appendChild(style)
-})
+// Function to redirect based on Firebase data
+function redirectToForum(forumId) {
+  // Firebase check (optional)
+  const forumUrl = `/view/${forumId}`; // Direct URL
+  window.location.href = forumUrl;
+}
+
+
+// Example usag // Pass the forum ID dynamically

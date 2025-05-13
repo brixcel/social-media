@@ -11,6 +11,7 @@
   
 </head>
 <body>
+
   <div class="ursac-container">
     <!-- Left Sidebar -->
     <div class="ursac-sidebar-left">
@@ -18,7 +19,7 @@
         <a href="#">URSAC Hub</a>
       </div>
       <div class="ursac-sidebar-menu">
-        <a href="{{ route('homepage') }}" class="ursac-menu-item ursac-menu-active">
+        <a href="#" class="ursac-menu-item  ">
           <i class="fas fa-home"></i>
           <span>Home</span>
         </a>
@@ -32,17 +33,23 @@
           <i class="fas fa-comment"></i>
           <span>Messages</span>
         </a>
-
-        <a href="{{ route('profile') }}" class="ursac-menu-item">
+        <a href="#" class="ursac-menu-item">
+          <i class="fas fa-users"></i>
+          <span>Organizations</span>
+        </a>
+        <a href="#" class="ursac-menu-item">
           <i class="fas fa-user"></i>
           <span>Profile</span>
         </a>
-        
+        <a href="#" class="ursac-menu-item">
+          <i class="fas fa-cog"></i>
+          <span>Settings</span>
+        </a>
         
         <!-- Post Button (After Settings) -->
         <button class="ursac-sidebar-post-btn" id="open-post-modal">
           <i class="fas fa-plus"></i>
-          <span>Post</span>
+          <span></span>
         </button>
         
         <!-- User Profile Button -->
@@ -63,6 +70,7 @@
         </div>
       </div>
     </div>
+     
     
     <!-- Main Content -->
     <div class="ursac-content-main">
@@ -72,7 +80,7 @@
       
       <!-- Tabs -->
       <div class="ursac-content-tabs">
-        <div class="ursac-tab ursac-tab-active">Posts</div>
+        <div class="ursac-tab ursac-tab-active">Forum</div>
       </div>
       
       
@@ -162,8 +170,16 @@
             </div>
           </div>
         </div>
-      </div>
+      </div>  
     </div>
+      
+
+      
+ 
+      
+      
+      
+  
     
     <!-- Right Sidebar -->
     <div class="ursac-sidebar-right">
@@ -193,45 +209,64 @@
           </div>
         </div>
         
-        <div class="ursac-forum-list"">
+        <div class="ursac-forum-list"></div>
+      
+      <!-- Events Section -->
+      <div class="ursac-sidebar-section">
+        <h3 class="ursac-sidebar-title">Upcoming Events</h3>
+        <div class="ursac-event-list">
+          <div class="ursac-event-item">
+            <div class="ursac-event-date">
+              <div class="ursac-event-month">SEP</div>
+              <div class="ursac-event-day">15</div>
+            </div>
+            <div class="ursac-event-info">
+              <div class="ursac-event-name">Freshmen Orientation</div>
+              <div class="ursac-event-location">Main Auditorium</div>
+            </div>
+          </div>
+          <div class="ursac-event-item">
+            <div class="ursac-event-date">
+              <div class="ursac-event-month">OCT</div>
+              <div class="ursac-event-day">05</div>
+            </div>
+            <div class="ursac-event-info">
+              <div class="ursac-event-name">Tech Symposium 2023</div>
+              <div class="ursac-event-location">Engineering Building</div>
+            </div>
+          </div>
         </div>
-      
-      
-      
-      
-
-
-  <!-- Post Modal -->
-  <div class="ursac-upload-modal" id="post-modal" style="display:none;z-index:2000;">
-    <div class="ursac-upload-content" style="max-width:400px;">
-      <h3 style="margin-bottom:10px;">What's happening?</h3>
-      <textarea id="modal-post-content" class="ursac-post-textarea" placeholder="What's happening?" style="margin-bottom:10px;"></textarea>
-      <div class="ursac-media-preview" id="modal-media-preview"></div>
-      <div class="ursac-post-actions">
-        <div class="ursac-post-action-group">
-          <label for="modal-file-photo" class="ursac-post-action"><i class="fas fa-image"></i></label>
-          <input type="file" id="modal-file-photo" accept="image/*" style="display:none;">
-          <label for="modal-file-video" class="ursac-post-action"><i class="fas fa-video"></i></label>
-          <input type="file" id="modal-file-video" accept="video/*" style="display:none;">
-          <label for="modal-file-attachment" class="ursac-post-action"><i class="fas fa-paperclip"></i></label>
-          <input type="file" id="modal-file-attachment" style="display:none;">
-        </div>
-        <button class="ursac-post-button" id="modal-post-button" disabled>Post</button>
       </div>
-      <button class="ursac-post-button" id="close-post-modal" style="background:var(--gray);margin-top:10px;">Cancel</button>
+      
+      <!-- Friends Section -->
+      <div class="ursac-sidebar-section">
+        <h3 class="ursac-sidebar-title">Friends</h3>
+        <div class="ursac-friend-list" id="friend-list">
+          <!-- Friends will be loaded dynamically -->
+          <div class="ursac-friend-item">
+            <div class="ursac-friend-avatar">
+              <div class="ursac-friend-status ursac-status-online"></div>
+            </div>
+            <div class="ursac-friend-info">
+              <div class="ursac-friend-name">Maria Santos</div>
+              <div class="ursac-friend-course">BS - IT</div>
+            </div>
+          </div>
+          <div class="ursac-friend-item">
+            <div class="ursac-friend-avatar">
+              <div class="ursac-friend-status ursac-status-offline"></div>
+            </div>
+            <div class="ursac-friend-info">
+              <div class="ursac-friend-name">John Reyes</div>
+              <div class="ursac-friend-course">BS - CpE</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
+
   
-  <!-- File upload progress modal -->
-  <div class="ursac-upload-modal" id="upload-modal">
-    <div class="ursac-upload-content">
-      <h3>Uploading...</h3>
-      <div class="ursac-progress-container">
-        <div class="ursac-progress-bar" id="upload-progress"></div>
-      </div>
-      <div class="ursac-upload-status" id="upload-status">0%</div>
-    </div>
-  </div>
 
   <!-- Scripts -->
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
@@ -290,11 +325,6 @@
   });
 </script>
   <script src="script.js"></script>
-<<<<<<< HEAD
-  <script type="module" src="notifications.js"></script>
-=======
-  <script src="notifications.js"></script>
-  <script src="messages.js"></script>
->>>>>>> 466e93e0987f5db1fba918d3f155c0d7d54ea531
+  <script src="view.js"></script>
 </body>
 </html>

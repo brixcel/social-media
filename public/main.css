@@ -1,5 +1,5 @@
 :root {
-    --main-color: rgb(18, 103, 221);
+    --main-color: #1267dd;
     --main-color-drk: rgb(0, 44, 105);
     --bg-gradient: linear-gradient(to bottom right, rgb(18, 103, 221), rgb(0, 174, 255));
     --white: #ffffff;
@@ -969,6 +969,13 @@ img, video {
     transition: width 0.3s ease, margin-left 0.3s ease;
 }
 
+.ursac-forums {
+    font-size: 1.5rem;
+    font-weight: bolder;
+    display: block;
+    align-items: center;
+}
+
 .ursac-sidebar-menu {
     flex: 1;
     display: flex;
@@ -1041,6 +1048,12 @@ img, video {
     border-radius: 5px 5px 0 0;
     margin-bottom: 0;
     overflow: hidden;
+}
+
+.ursac-content-header {
+    color: white;
+    align-items: center;
+    font-size: 1.5rem;
 }
 
 .ursac-tab {
@@ -1523,6 +1536,45 @@ img, video {
 .ursac-forum-count {
     font-size: var(--font-size-xs);
     color: var(--dark-gray);
+}
+
+.ursac-forum-name-container {
+  display: flex;
+  align-items: center;
+}
+
+.ursac-forum-logo {
+  width: 40px; /* Adjust as needed */
+  height: 40px;
+  margin-right: 10px;
+}
+.ursac-forum-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1); /* Optional: visual style */
+  width: 100%;
+  cursor: pointer;
+}
+
+
+.ursac-forum-card-header,
+.ursac-forum-card-body {
+    background-color: var(--white);
+    border: none;
+    width: 100%;
+    display: block;
+  
+}
+
+
+
+
+
+
+.ursac-forum-card:hover {
+    background-color: #e4e6eb;
 }
 
 /* Events styles */

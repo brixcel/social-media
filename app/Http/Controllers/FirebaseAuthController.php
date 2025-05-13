@@ -115,17 +115,21 @@ public function messages()
     return view('Auth.messages'); // Corrected the view name here
 }
 
-public function forums()
+public function join()
 {
-    // Example: load a view and pass forum data
-    return view('Auth.forums', [
-        'categories' => [
-            'Academic Discussions',
-            'Tech Corner',
-            'Announcements'
-        ]
-    ]);
+    return view('Auth.join'); // Blade file: resources/views/forums/join.blade.php
 }
+
+public function create()
+{
+    return view('Auth.create'); // Blade file: resources/views/forums/join.blade.php
+}
+
+public function view()
+{
+    return view('Auth.view'); // Blade file: resources/views/forums/join.blade.php
+}
+
 
 
 
