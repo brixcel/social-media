@@ -150,7 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function updateNotificationsUI(notifications) {
-  if (!notificationsFeed) return;
+  if (!notificationsFeed) return;;
 
   // First, fetch all user data needed for these notifications
   const userIds = [...new Set(notifications.map(notif => notif.userId))];
@@ -240,10 +240,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return `
           <div class="ursac-notification-item ${notif.read ? '' : 'unread'}" 
                data-notification-id="${notif.id}" 
-               data-post-id="${notif.postId || ""}"
-               data-conversation-id="${notif.conversationId || ""}"
-               data-message-id="${notif.messageId || ""}"
-               data-comment-id="${notif.commentId || ""}">
+               data-post-id="${notif.postId}">
             <div class="ursac-notification-icon">
               ${categoryIcon}
             </div>
