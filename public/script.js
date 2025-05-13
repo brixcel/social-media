@@ -124,6 +124,9 @@ const prohibitedWords = [
   "bilat",
   "kantot",
   "iyot",
+  "tarub",
+  "siraulo",
+  
 
   // English bad words
   "stupid",
@@ -144,6 +147,8 @@ const prohibitedWords = [
   "pussy",
   "whore",
   "ass",
+  "nigga", 
+  "nigger",
 ]
 
 // Profanity Filter - Check if text contains prohibited words
@@ -2800,7 +2805,6 @@ function highlightButton(button) {
 // Call this function after posts are loaded
 document.addEventListener("DOMContentLoaded", () => {
   // Wait for posts to load, then highlight new ones
-<<<<<<< HEAD
   setTimeout(highlightNewPosts, 2000);
 });
 
@@ -3013,233 +3017,6 @@ loadJoinableForums();
 // firebase.initializeApp(firebaseConfig);
 
 // Function to redirect based on Firebase data
-function redirectToForum(forumId) {
-  // Firebase check (optional)
-  const forumUrl = `/view/${forumId}`; // Direct URL
-  window.location.href = forumUrl;
-}
 
 
 // Example usag // Pass the forum ID dynamically
-=======
-  setTimeout(highlightNewPosts, 2000);
-});
-
-
-document.addEventListener('DOMContentLoaded', function () {
-  const forumListContainer = document.querySelector('.ursac-forum-list');
-
-  // Inject CSS styles directly
-  const style = document.createElement('style');
-  document.head.appendChild(style);
-
-  // Function to display forums the user has joined
-  function displayUserForums(user) {
-    const forumsRef = firebase.database().ref('forums');
-     const forumListRoute = "{{ route('view', ['forum' => '']) }}";
-
-    forumsRef.once('value')
-      .then(snapshot => {
-        const joinedForums = [];
-
-        snapshot.forEach(forumSnap => {
-          const forumData = forumSnap.val();
-          if (forumSnap.child('members').hasChild(user.uid)) {
-            joinedForums.push({
-              id: forumSnap.key,
-              name: forumData.name || 'Unnamed Forum'
-            });
-          }
-        });
-
-        if (forumListContainer) {
-          forumListContainer.innerHTML = joinedForums.length > 0
-            ? joinedForums.map(forum => `
-                <div class="ursac-forum-item" onclick="redirectToForum('${forum.id}')">
-                  <h3>${forum.name}</h3>
-                </div>
-              `).join('')
-            : '<p>You have not joined any forums yet.</p>';
-        }
-      })
-      .catch(error => {
-        console.error('Error fetching forums:', error);
-        if (forumListContainer) {
-          forumListContainer.innerHTML = '<p>Failed to load forums. Please try again later.</p>';
-        }
-      });
-  }
-
-  // Check auth state and then display joined forums
-  firebase.auth().onAuthStateChanged(user => {
-    if (user) {
-      displayUserForums(user);
-    } else if (forumListContainer) {
-      forumListContainer.innerHTML = '<p>Please log in to view your forums.</p>';
-    }
-  });
-});
-  // Wait until the DOM is fully loaded
-document.addEventListener('DOMContentLoaded', function () {
-    // Get references to the necessary elements
-    const openBtn = document.getElementById('add-forum-btn');
-    const modal = document.getElementById('addForumModal');
-    const closeBtn = document.getElementById('closeModalBtn');
-
-    // Open modal when add-forum button is clicked
-    if (openBtn) {
-      openBtn.addEventListener('click', function () {
-        console.log("Add Forum button clicked");
-        if (modal) {
-          modal.style.display = 'block';
-        }
-      });
-    }
-
-    // Close modal when X is clicked
-    if (closeBtn) {
-      closeBtn.addEventListener('click', function () {
-        if (modal) {
-          modal.style.display = 'none';
-        }
-      });
-    }
-
-    // Close modal when clicking outside the modal content
-    window.addEventListener('click', function (event) {
-      if (event.target === modal) {
-        if (modal) {
-          modal.style.display = 'none';
-        }
-      }
-    });
-
-    // Inject CSS for the modal
-    const styles = `
-      /* Modal backdrop */
-      .ursac-modal {
-        display: none; /* Hidden by default */
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: auto; /* Enable scroll if needed */
-        background-color: rgba(0, 0, 0, 0.6); /* Dark semi-transparent background */
-      }
-
-      /* Modal content box */
-      .ursac-modal-content {
-        background-color: #fff;
-        margin: auto;
-        top: 20%;
-        position: relative;
-        transform: translateY(20%);
-        padding: 25px 30px;
-        border-radius: 12px;
-        width: 95%;
-        max-width: 400px;
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
-        animation: fadeIn 0.3s ease-out;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      }
-      
-      /* Close button (X) */
-      .ursac-close {
-        position: absolute;
-        top: 12px;
-        right: 16px;
-        font-size: 24px;
-        font-weight: bold;
-        color: #888;
-        cursor: pointer;
-      }
-
-      .ursac-close:hover {
-        color: #000;
-      }
-
-      /* Simple fade-in animation */
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(-20px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-    `;
-
-    // Create a style element and append to the head
-    const styleSheet = document.createElement("style");
-    styleSheet.type = "text/css";
-    styleSheet.innerText = styles;
-    document.head.appendChild(styleSheet);
-  });
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
-
-// ✅ Auth check before calling your function
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    console.log("User is logged in:", user.uid);
-    loadJoinableForums(user);
-  } else {
-    console.log("No user is signed in.");
-  }
-});
-
-
-function loadJoinableForums(user) {
-  const userId = user.uid;
-  const forumsRef = ref(db, 'forums');
-
-  onValue(forumsRef, (snapshot) => {
-    const forums = snapshot.val();
-    const joinableForums = [];
-
-    for (const forumId in forums) {
-      const forum = forums[forumId];
-      const members = forum.members || {};
-
-      // If user is NOT a member of this forum, show it in Join tab
-      if (!members.hasOwnProperty(userId)) {
-        joinableForums.push({
-          id: forumId,
-          ...forum
-        });
-      }
-    }
-
-    displayJoinableForums(joinableForums);
-  });
-}
-
-// Sample function to render joinable forums
-function displayJoinableForums(forums) {
-  const forumList = document.getElementById('joinable-forums');
-  forumList.innerHTML = '';
-
-  forums.forEach(forum => {
-    const item = document.createElement('div');
-    item.textContent = `${forum.description}`;
-    forumList.appendChild(item);
-  });
-}
-
-// Call this on page load
-loadJoinableForums();
-
-
-// // Initialize Firebase (if not already done)
-// firebase.initializeApp(firebaseConfig);
-
-// Function to redirect based on Firebase data
-function redirectToForum(forumId) {
-  // Firebase check (optional)
-  const forumUrl = `/view/${forumId}`; // Direct URL
-  window.location.href = forumUrl;
-}
-
-
-// Example usag // Pass the forum ID dynamically
->>>>>>> 466e93e0987f5db1fba918d3f155c0d7d54ea531

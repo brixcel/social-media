@@ -286,11 +286,7 @@
   });
 </script>
   <script src="script.js"></script>
-<<<<<<< HEAD
-  <script type="module" src="notifications.js"></script>
-=======
   <script src="notifications.js"></script>
   <script src="messages.js"></script>
->>>>>>> 466e93e0987f5db1fba918d3f155c0d7d54ea531
 </body>
 </html>
