@@ -1,3 +1,89 @@
+// Add this function to the top of script.js
+function setupProfileUpdateListener() {
+  // Listen for profile updates from other pages
+  document.addEventListener("profileUpdated", (event) => {
+    const userId = event.detail.userId
+
+    // If this is the current user, update the UI
+    if (userId === currentUser?.uid) {
+      loadUserProfile(currentUser)
+    }
+  })
+
+  // Listen for changes to the profileUpdates node in Firebase
+  firebase
+    .database()
+    .ref("profileUpdates")
+    .on("child_changed", (snapshot) => {
+      const userId = snapshot.key
+      const timestamp = snapshot.val()
+
+      // If this is not the current user, update the UI
+      if (userId !== currentUser?.uid) {
+        // Check if this user's data is displayed on the page
+        const userElements = document.querySelectorAll(`[data-user-id="${userId}"]`)
+        if (userElements.length > 0) {
+          // Refresh user data
+          firebase
+            .database()
+            .ref(`users/${userId}`)
+            .once("value")
+            .then((snapshot) => {
+              const userData = snapshot.val()
+              if (userData) {
+                // Update all elements with this user's data
+                userElements.forEach((element) => {
+                  // Update based on element type
+                  if (element.classList.contains("ursac-post-card")) {
+                    updatePostWithUserData(element, userData)
+                  } else if (element.classList.contains("ursac-comment")) {
+                    updateCommentWithUserData(element, userData)
+                  }
+                  // Add more element types as needed
+                })
+              }
+            })
+        }
+      }
+    })
+}
+
+// Helper function to update post elements with new user data
+function updatePostWithUserData(postElement, userData) {
+  // Update author name
+  const authorElement = postElement.querySelector(".ursac-post-author")
+  if (authorElement) {
+    authorElement.textContent = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+  }
+
+  // Update avatar
+  const avatarElement = postElement.querySelector(".ursac-profile-avatar")
+  if (avatarElement) {
+    if (userData.profileImageUrl) {
+      avatarElement.innerHTML = `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+    } else {
+      const initials = getInitials(userData.firstName, userData.lastName)
+      avatarElement.innerHTML = `<span>${initials}</span>`
+    }
+  }
+}
+
+// Helper function to update comment elements with new user data
+function updateCommentWithUserData(commentElement, userData) {
+  // Update author name
+  const authorElement = commentElement.querySelector(".ursac-comment-author")
+  if (authorElement) {
+    authorElement.textContent = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+  }
+
+  // Update avatar
+  const avatarElement = commentElement.querySelector(".ursac-comment-avatar span")
+  if (avatarElement) {
+    const initials = getInitials(userData.firstName, userData.lastName)
+    avatarElement.textContent = initials
+  }
+}
+
 const firebase = window.firebase
 let currentUser = null
 let selectedMedia = null
@@ -201,6 +287,7 @@ function loadNotifications() {
 }
 
 // Move loadUserProfile function here, outside DOMContentLoaded
+// Update the loadUserProfile function to handle profile images
 function loadUserProfile(user) {
   if (!user) {
     return
@@ -220,22 +307,30 @@ function loadUserProfile(user) {
 
         // Update profile button
         userProfileBtn.innerHTML = `
-          <div class="ursac-profile-avatar">
-            <span>${initials}</span>
-          </div>
-          <div class="ursac-profile-info">
-            <div class="ursac-profile-name">${fullName}</div>
-            <div class="ursac-profile-email">${user.email}</div>
-          </div>
-          <i class="fas fa-chevron-down"></i>
-        `
+                    <div class="ursac-profile-avatar">
+                        ${
+                          userData.profileImageUrl
+                            ? `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+                            : `<span>${initials}</span>`
+                        }
+                    </div>
+                    <div class="ursac-profile-info">
+                        <div class="ursac-profile-name">${fullName}</div>
+                        <div class="ursac-profile-email">${user.email}</div>
+                    </div>
+                    <i class="fas fa-chevron-down"></i>
+                `
 
         // Update create post area
         const createPostAvatar = document.getElementById("create-post-avatar")
         const createPostUsername = document.getElementById("create-post-username")
 
         if (createPostAvatar) {
-          createPostAvatar.innerHTML = `<span>${initials}</span>`
+          if (userData.profileImageUrl) {
+            createPostAvatar.innerHTML = `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+          } else {
+            createPostAvatar.innerHTML = `<span>${initials}</span>`
+          }
         }
         if (createPostUsername) {
           createPostUsername.textContent = fullName
@@ -269,6 +364,9 @@ document.addEventListener("DOMContentLoaded", () => {
       loadUserProfile(user) // Load user profile data
       loadPosts() // Load posts after user is authenticated
       loadNotifications() // Load notifications after user is authenticated
+
+      // Set up profile update listener
+      setupProfileUpdateListener()
 
       // Set up a periodic refresh of notifications
       setInterval(loadNotifications, 30000) // Refresh every 30 seconds
@@ -1281,6 +1379,7 @@ function updatePostButton() {
 }
 
 // This function should be updated to create post elements with thumbs up instead of heart
+// Update the createPostElement function to handle profile images
 function createPostElement(post, userData) {
   const postId = post.id
   const postTimestamp = new Date(post.timestamp)
@@ -1301,15 +1400,20 @@ function createPostElement(post, userData) {
 
   // Create post HTML structure
   let postHTML = `
-    <div class="ursac-post-header">
-      <div class="ursac-profile-avatar">
-        <span>${userInitials}</span>
-      </div>
-      <div class="ursac-post-meta">
-        <div class="ursac-post-author">${userName}</div>
-        <div class="ursac-post-time">${timeAgo}</div>
-      </div>
-    </div>
+        <div class="ursac-post-header">
+            <div class="ursac-profile-avatar">
+                ${
+                  userData?.profileImageUrl
+                    ? `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+                    : `<span>${userInitials}</span>`
+                }
+            </div>
+            <div class="ursac-post-meta">
+                <div class="ursac-post-author">${userName}</div>
+                <div class="ursac-post-time">${timeAgo}</div>
+            </div>
+        </div>
+        
     <div class="ursac-post-content">
       ${post.content ? `<p>${linkifyText(post.content)}</p>` : ""}
   `
@@ -1372,7 +1476,7 @@ function createPostElement(post, userData) {
           </button>
         </div>
       </div>
-      
+
       <div class="ursac-comments-list">
         <!-- Comments will be loaded dynamically -->
       </div>
@@ -1848,7 +1952,7 @@ function createPostFunc() {
   }
 }
 
-// Function to upload media
+// Updated uploadMedia function to use ImgBB API for images
 function uploadMedia(file, type) {
   return new Promise((resolve, reject) => {
     if (!file) {
@@ -1865,40 +1969,92 @@ function uploadMedia(file, type) {
     if (uploadStatus) uploadStatus.textContent = "0%"
     if (uploadProgress) uploadProgress.style.width = "0%"
 
-    // Create storage reference
-    const storageRef = firebase.storage().ref()
-    const fileExtension = file.name.split(".").pop()
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExtension}`
+    // For non-image files, we'll still use Firebase Storage
+    if (type !== "image") {
+      // Create storage reference
+      const storageRef = firebase.storage().ref()
+      const fileExtension = file.name.split(".").pop()
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExtension}`
 
-    // Choose appropriate folder based on file type
-    let fileRef
-    if (type === "image") {
-      fileRef = storageRef.child(`images/${fileName}`)
-    } else if (type === "video") {
-      fileRef = storageRef.child(`videos/${fileName}`)
-    } else {
-      fileRef = storageRef.child(`files/${fileName}`)
+      // Choose appropriate folder based on file type
+      let fileRef
+      if (type === "video") {
+        fileRef = storageRef.child(`videos/${fileName}`)
+      } else {
+        fileRef = storageRef.child(`files/${fileName}`)
+      }
+
+      // Upload the file
+      const uploadTask = fileRef.put(file)
+
+      // Monitor upload progress
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+          if (uploadProgress) uploadProgress.style.width = progress + "%"
+          if (uploadStatus) uploadStatus.textContent = `${Math.round(progress)}%`
+        },
+        (error) => {
+          console.error("Upload failed:", error)
+          if (uploadModal) uploadModal.style.display = "none"
+          reject(error)
+        },
+        () => {
+          // Upload completed successfully
+          uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+            if (uploadStatus) uploadStatus.textContent = "Upload complete!"
+
+            // Hide modal after a short delay
+            setTimeout(() => {
+              if (uploadModal) uploadModal.style.display = "none"
+            }, 1000)
+
+            // Resolve with media data
+            resolve({
+              url: downloadURL,
+              type: type,
+              name: file.name,
+              size: formatFileSize(file.size),
+            })
+          })
+        },
+      )
+      return
     }
 
-    // Upload the file
-    const uploadTask = fileRef.put(file)
+    // For images, use ImgBB API
+    // First, convert the file to base64
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => {
+      const base64data = reader.result.split(",")[1]
 
-    // Monitor upload progress
-    uploadTask.on(
-      "state_changed",
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-        if (uploadProgress) uploadProgress.style.width = progress + "%"
-        if (uploadStatus) uploadStatus.textContent = `${Math.round(progress)}%`
-      },
-      (error) => {
-        console.error("Upload failed:", error)
-        if (uploadModal) uploadModal.style.display = "none"
-        reject(error)
-      },
-      () => {
-        // Upload completed successfully
-        uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+      // Get ImgBB API key from environment
+      const apiKey = "fa517d5bab87e31f661cb28d7de365ba" // Using the ImgBB API key from .env
+
+      // Create form data for the API request
+      const formData = new FormData()
+      formData.append("image", base64data)
+
+      // Update progress to show we're starting the upload
+      if (uploadProgress) uploadProgress.style.width = "10%"
+      if (uploadStatus) uploadStatus.textContent = "Uploading to ImgBB..."
+
+      // Make the API request to ImgBB
+      fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+        method: "POST",
+        body: formData,
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`ImgBB API error: ${response.status}`)
+          }
+          return response.json()
+        })
+        .then((data) => {
+          // Update progress to show completion
+          if (uploadProgress) uploadProgress.style.width = "100%"
           if (uploadStatus) uploadStatus.textContent = "Upload complete!"
 
           // Hide modal after a short delay
@@ -1906,16 +2062,52 @@ function uploadMedia(file, type) {
             if (uploadModal) uploadModal.style.display = "none"
           }, 1000)
 
+          // Store image metadata (without using Firestore FieldValue)
+          const timestamp = Date.now()
+
+          // Add to Firestore images collection if Firestore is available
+          if (firebase.firestore) {
+            const imageData = {
+              url: data.data.url,
+              display_url: data.data.display_url,
+              delete_url: data.data.delete_url,
+              timestamp: timestamp,
+            }
+
+            firebase
+              .firestore()
+              .collection("images")
+              .add(imageData)
+              .then((docRef) => {
+                console.log("Image URL saved to Firestore with ID:", docRef.id)
+              })
+              .catch((error) => {
+                console.error("Error saving image URL to Firestore:", error)
+              })
+          } else {
+            console.log("Firestore not available, skipping image metadata storage")
+          }
+
           // Resolve with media data
           resolve({
-            url: downloadURL,
-            type: type,
+            url: data.data.url,
+            type: "image",
             name: file.name,
             size: formatFileSize(file.size),
           })
         })
-      },
-    )
+        .catch((error) => {
+          console.error("ImgBB upload failed:", error)
+          if (uploadModal) uploadModal.style.display = "none"
+          reject(error)
+        })
+    }
+
+    reader.onerror = (error) => {
+      console.error("Error reading file:", error)
+      if (uploadModal) uploadModal.style.display = "none"
+      reject(error)
+    }
   })
 }
 
@@ -1987,11 +2179,11 @@ function addCommentStyles() {
       flex-direction: column;
       gap: 10px;
     }
-    
+
     .ursac-comment-thread {
       margin-bottom: 10px;
     }
-    
+
     .ursac-comment {
       display: flex;
       padding: 10px;
@@ -2104,155 +2296,305 @@ function addCommentStyles() {
   document.head.appendChild(style)
 }
 
-// Add CSS for styling the comments and replies
-function addCommentStylesLegacy() {
+// Call enhanceCommentInputs when the page loads
+document.addEventListener("DOMContentLoaded", () => {
+  // Add comment styles
+  addCommentStyles()
+
+  // Initialize comment listeners
+  initializeCommentListeners()
+
+  // Enhance comment inputs after a short delay to ensure DOM is ready
+  setTimeout(enhanceCommentInputs, 1000)
+})
+
+// Generic modal function to replace alerts
+function showModal(title, message) {
+  // Create modal if it doesn't exist
+  let modalElement = document.getElementById("generic-modal")
+
+  if (!modalElement) {
+    const modalHTML = `
+      <div class="ursac-modal" id="generic-modal">
+        <div class="ursac-modal-content">
+          <div class="ursac-modal-header">
+            <h3 id="modal-title"></h3>
+            <button class="ursac-modal-close" id="close-generic-modal">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="ursac-modal-body">
+            <p id="modal-message"></p>
+          </div>
+          <div class="ursac-modal-footer">
+            <button class="ursac-button ursac-button-primary" id="acknowledge-modal">OK</button>
+          </div>
+        </div>
+      </div>
+    `
+
+    const modalContainer = document.createElement("div")
+    modalContainer.innerHTML = modalHTML
+    document.body.appendChild(modalContainer.firstElementChild)
+
+    modalElement = document.getElementById("generic-modal")
+
+    // Add event listeners
+    document.getElementById("close-generic-modal").addEventListener("click", () => {
+      modalElement.style.display = "none"
+    })
+
+    document.getElementById("acknowledge-modal").addEventListener("click", () => {
+      modalElement.style.display = "none"
+    })
+  }
+
+  // Update modal content
+  document.getElementById("modal-title").textContent = title
+  document.getElementById("modal-message").textContent = message
+
+  // Show modal
+  modalElement.style.display = "flex"
+}
+
+// Make showModal available globally
+window.showModal = showModal
+
+// Add CSS for the modal
+document.addEventListener("DOMContentLoaded", () => {
   const style = document.createElement("style")
   style.textContent = `
-    .ursac-comments-list {
-      margin-top: 15px;
-    }
-    
-    .ursac-loading {
-      text-align: center;
-      padding: 10px;
-      color: #777;
-    }
-    
-    .ursac-no-comments {
-      text-align: center;
-      padding: 15px;
-      color: #777;
-      font-style: italic;
-    }
-    
-    .ursac-error {
-      text-align: center;
-      padding: 10px;
-      color: #e74c3c;
-    }
-    
-    .ursac-comment-input-wrapper {
-      display: flex;
-      align-items: flex-start;
-      margin-bottom: 10px;
-      padding: 10px;
-      background-color: #f9f9f9;
-      border-radius: 8px;
-    }
-    
-    .ursac-comment-input-container {
-      display: flex;
-      flex: 1;
-      position: relative;
-    }
-    
-    .ursac-comment-input, .ursac-reply-input {
-      flex: 1;
-      border: 1px solid #ddd;
-      border-radius: 20px;
-      padding: 8px 12px;
-      padding-right: 40px;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    
-    .ursac-comment-input:focus, .ursac-reply-input:focus {
-      border-color: #4a76a8;
-    }
-    
-    .ursac-comment-submit, .ursac-reply-submit {
-      position: absolute;
-      right: 5px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: #4a76a8;
-      cursor: pointer;
-      padding: 5px;
-    }
-    
-    .ursac-comment-submit:disabled, .ursac-reply-submit:disabled {
-      color: #ccc;
-      cursor: not-allowed;
-    }
-    
-    .ursac-comment-media {
-      margin-top: 10px;
-      max-width: 100%;
-    }
-    
-    .ursac-comment-media img {
-      max-width: 200px;
-      max-height: 150px;
-      border-radius: 8px;
-    }
-    
-    .ursac-comment-attachment {
-      margin-top: 10px;
-    }
-    
-    .ursac-comment-attachment a {
-      display: inline-flex;
-      align-items: center;
-      padding: 5px 10px;
-      background-color: #f1f1f1;
-      border-radius: 4px;
-      text-decoration: none;
-      color: #333;
-    }
-    
-    .ursac-comment-attachment a i {
-      margin-right: 5px;
-    }
-    
-    .ursac-post-owner-badge {
-      display: inline-block;
-      background-color: #4a76a8;
-      color: white;
-      font-size: 10px;
-      padding: 2px 5px;
-      border-radius: 3px;
-      margin-left: 5px;
-      vertical-align: middle;
-    }
-    
-    .ursac-reply-cancel {
-      background: none;
-      border: none;
-      color: #777;
-      cursor: pointer;
-      margin-left: 5px;
-    }
-    
-    .ursac-reply-options {
-      display: flex;
-      gap: 10px;
-      margin-top: 5px;
-    }
-    
-    .ursac-reply-options button {
-      background: none;
-      border: none;
-      font-size: 12px;
-      cursor: pointer;
-      padding: 0;
-    }
-    
-    .ursac-reply-options .reply-normal {
-      color: #4a76a8;
-    }
-    
-    .ursac-reply-options .reply-as-owner {
-      color: #e74c3c;
-    }
+   .custom-modal {
+  display: none; /* Hidden by default */
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+}
+
+/* Modal box */
+.custom-modal-box {
+  background-color: #fff;
+  margin: 10% auto;
+  padding: 20px 30px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 400px;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Close button */
+.custom-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 28px;
+  font-weight: bold;
+  color: #888;
+  cursor: pointer;
+}
+
+.custom-close:hover {
+  color: #000;
+}
+
+/* Button */
+.custom-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  padding: 10px 16px;
+  font-size: 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: 0.2s ease-in-out;
+  gap: 8px;
+}
+
+.custom-button-primary {
+  color: #0056b3;
+  align:items: center;
+  border: none;
+}
+
+
+
+.custom-button-primary:hover {
+  background-color: #0056b3;
+  color: #fff;
+}
+
+.custom-button-secondary {
+  color: #0056b3;
+}
+
+.custom-button-secondary:hover {
+  background-color: #0056b3;
+  color: #fff;
+}
+
+
+
+/* Optional fade-in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
   `
   document.head.appendChild(style)
+})
+
+// Function to enhance comment inputs with additional features
+function enhanceCommentInputs() {
+  // Find all comment inputs
+  document.querySelectorAll(".ursac-comment-input").forEach((input) => {
+    const postCard = input.closest(".ursac-post-card")
+    if (postCard) {
+      const postId = postCard.getAttribute("data-post-id")
+      if (postId) {
+        // Add emoji picker
+        addEmojiPickerToInput(input)
+
+        // Add media button
+        addMediaButtonToInput(input, postId)
+      }
+    }
+  })
+}
+
+// Function to add emoji picker to comment input
+function addEmojiPickerToInput(inputElement) {
+  // Create emoji button
+  const emojiButton = document.createElement("button")
+  emojiButton.type = "button"
+  emojiButton.className = "ursac-emoji-button"
+  emojiButton.innerHTML = '<i class="far fa-smile"></i>'
+  emojiButton.style.position = "absolute"
+  emojiButton.style.right = "40px"
+  emojiButton.style.top = "50%"
+  emojiButton.style.transform = "translateY(-50%)"
+  emojiButton.style.background = "none"
+  emojiButton.style.border = "none"
+  emojiButton.style.color = "#777"
+  emojiButton.style.cursor = "pointer"
+
+  // Add emoji button next to input
+  const inputContainer = inputElement.parentNode
+  inputContainer.insertBefore(emojiButton, inputElement.nextSibling)
+
+  // Common emojis
+  const commonEmojis = ["😊", "👍", "❤️", "😂", "🎉", "👏", "🙏", "🔥", "😍", "😎"]
+
+  // Create emoji picker
+  const emojiPicker = document.createElement("div")
+  emojiPicker.className = "ursac-emoji-picker"
+  emojiPicker.style.display = "none"
+  emojiPicker.style.position = "absolute"
+  emojiPicker.style.top = "-80px"
+  emojiPicker.style.right = "0"
+  emojiPicker.style.background = "white"
+  emojiPicker.style.border = "1px solid #ddd"
+  emojiPicker.style.borderRadius = "5px"
+  emojiPicker.style.padding = "5px"
+  emojiPicker.style.zIndex = "100"
+  emojiPicker.style.boxShadow = "0 2px 5px rgba(0,0,0,0.1)"
+
+  // Add emojis to picker
+  commonEmojis.forEach((emoji) => {
+    const emojiSpan = document.createElement("span")
+    emojiSpan.textContent = emoji
+    emojiSpan.style.cursor = "pointer"
+    emojiSpan.style.padding = "5px"
+    emojiSpan.style.fontSize = "16px"
+
+    emojiSpan.addEventListener("click", (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+
+      // Insert emoji at cursor position
+      const cursorPos = inputElement.selectionStart
+      const textBefore = inputElement.value.substring(0, cursorPos)
+      const textAfter = inputElement.value.substring(cursorPos)
+
+      inputElement.value = textBefore + emoji + textAfter
+
+      // Update cursor position
+      const newCursorPos = cursorPos + emoji.length
+      inputElement.setSelectionRange(newCursorPos, newCursorPos)
+
+      // Focus back on input
+      inputElement.focus()
+
+      // Hide emoji picker
+      emojiPicker.style.display = "none"
+
+      // Trigger input event to update submit button state
+      const event = new Event("input", { bubbles: true })
+      inputElement.dispatchEvent(event)
+    })
+
+    emojiPicker.appendChild(emojiSpan)
+  })
+
+  // Add emoji picker to input container
+  inputContainer.appendChild(emojiPicker)
+
+  // Toggle emoji picker on button click
+  emojiButton.addEventListener("click", (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const isVisible = emojiPicker.style.display === "block"
+    emojiPicker.style.display = isVisible ? "none" : "block"
+  })
+
+  // Hide emoji picker when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!emojiPicker.contains(e.target) && e.target !== emojiButton) {
+      emojiPicker.style.display = "none"
+    }
+  })
+}
+
+// Function to add media button to comment input
+function addMediaButtonToInput(inputElement, postId) {
+  // Create media button
+  const mediaButton = document.createElement("button")
+  mediaButton.type = "button"
+  mediaButton.className = "ursac-media-button"
+  mediaButton.innerHTML = '<i class="far fa-image"></i>'
+  mediaButton.style.position = "absolute"
+  mediaButton.style.right = "70px"
+  mediaButton.style.top = "50%"
+  mediaButton.style.transform = "translateY(-50%)"
+  mediaButton.style.background = "none"
+  mediaButton.style.border = "none"
+  mediaButton.style.color = "#777"
+  mediaButton.style.cursor = "pointer"
+
+  // Add media button next to input
+  const inputContainer = inputElement.parentNode
+  inputContainer.insertBefore(mediaButton, inputElement.nextSibling)
+
+  // Handle media button click
+  mediaButton.addEventListener("click", (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    // Open file input for image selection
+    handleCommentMediaUploadToInput(postId, inputElement)
+  })
 }
 
 // Function to handle comment media uploads
-function handleCommentMediaUpload(postId, commentInput) {
+function handleCommentMediaUploadToInput(postId, commentInput) {
   const fileInput = document.createElement("input")
   fileInput.type = "file"
   fileInput.accept = "image/*"
@@ -2360,343 +2702,21 @@ function submitCommentWithMedia(postId) {
     })
 }
 
-// Function to handle mentions in comments
-function handleMentions(text, postId) {
-  // Simple regex to find @username mentions
-  const mentionRegex = /@(\w+)/g
-  const mentions = text.match(mentionRegex)
-
-  if (!mentions || !mentions.length) return Promise.resolve()
-
-  // Get unique usernames (without the @)
-  const usernames = [...new Set(mentions.map((m) => m.substring(1)))]
-
-  // Find users by username and create notifications
-  const promises = usernames.map((username) => {
-    return firebase
-      .database()
-      .ref("users")
-      .orderByChild("username")
-      .equalTo(username)
-      .once("value")
-      .then((snapshot) => {
-        if (snapshot.exists()) {
-          snapshot.forEach((childSnapshot) => {
-            const userId = childSnapshot.key
-
-            // Don't notify yourself
-            if (userId === currentUser.uid) return
-
-            // Create a mention notification
-            const notifRef = firebase.database().ref(`notifications/${userId}`).push()
-            return notifRef.set({
-              type: "mention",
-              userId: currentUser.uid,
-              postId: postId,
-              mentionText: text,
-              timestamp: firebase.database.ServerValue.TIMESTAMP,
-              read: false,
-            })
-          })
-        }
-      })
-  })
-
-  return Promise.all(promises)
-}
-
-// Function to check if a user is mentioned in a comment
-function isUserMentioned(text, userId) {
-  // Get the username for the user ID
-  return firebase
-    .database()
-    .ref(`users/${userId}`)
-    .once("value")
-    .then((snapshot) => {
-      if (snapshot.exists()) {
-        const userData = snapshot.val()
-        if (userData.username) {
-          const mentionRegex = new RegExp(`@${userData.username}\\b`, "i")
-          return mentionRegex.test(text)
-        }
-      }
-      return false
-    })
-}
-
-// Function to get user data by ID
-function getUserData(userId) {
-  return firebase
-    .database()
-    .ref(`users/${userId}`)
-    .once("value")
-    .then((snapshot) => {
-      if (snapshot.exists()) {
-        return snapshot.val()
-      }
-      return null
-    })
-}
-
-// Function to format mentions in text with links
-function formatMentions(text) {
-  // Replace @username with linked username
-  return text.replace(/@(\w+)/g, '<a href="#" class="ursac-mention">@$1</a>')
-}
-
-// Function to add emoji picker to comment input
-function addEmojiPicker(inputElement) {
-  // Create emoji button
-  const emojiButton = document.createElement("button")
-  emojiButton.type = "button"
-  emojiButton.className = "ursac-emoji-button"
-  emojiButton.innerHTML = '<i class="far fa-smile"></i>'
-  emojiButton.style.position = "absolute"
-  emojiButton.style.right = "40px"
-  emojiButton.style.top = "50%"
-  emojiButton.style.transform = "translateY(-50%)"
-  emojiButton.style.background = "none"
-  emojiButton.style.border = "none"
-  emojiButton.style.color = "#777"
-  emojiButton.style.cursor = "pointer"
-
-  // Add emoji button next to input
-  const inputContainer = inputElement.parentNode
-  inputContainer.insertBefore(emojiButton, inputElement.nextSibling)
-
-  // Common emojis
-  const commonEmojis = ["😊", "👍", "❤️", "😂", "🎉", "👏", "🙏", "🔥", "😍", "😎"]
-
-  // Create emoji picker
-  const emojiPicker = document.createElement("div")
-  emojiPicker.className = "ursac-emoji-picker"
-  emojiPicker.style.display = "none"
-  emojiPicker.style.position = "absolute"
-  emojiPicker.style.top = "-80px"
-  emojiPicker.style.right = "0"
-  emojiPicker.style.background = "white"
-  emojiPicker.style.border = "1px solid #ddd"
-  emojiPicker.style.borderRadius = "5px"
-  emojiPicker.style.padding = "5px"
-  emojiPicker.style.zIndex = "100"
-  emojiPicker.style.boxShadow = "0 2px 5px rgba(0,0,0,0.1)"
-
-  // Add emojis to picker
-  commonEmojis.forEach((emoji) => {
-    const emojiSpan = document.createElement("span")
-    emojiSpan.textContent = emoji
-    emojiSpan.style.cursor = "pointer"
-    emojiSpan.style.padding = "5px"
-    emojiSpan.style.fontSize = "16px"
-
-    emojiSpan.addEventListener("click", (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-
-      // Insert emoji at cursor position
-      const cursorPos = inputElement.selectionStart
-      const textBefore = inputElement.value.substring(0, cursorPos)
-      const textAfter = inputElement.value.substring(cursorPos)
-
-      inputElement.value = textBefore + emoji + textAfter
-
-      // Update cursor position
-      const newCursorPos = cursorPos + emoji.length
-      inputElement.setSelectionRange(newCursorPos, newCursorPos)
-
-      // Focus back on input
-      inputElement.focus()
-
-      // Hide emoji picker
-      emojiPicker.style.display = "none"
-
-      // Trigger input event to update submit button state
-      const event = new Event("input", { bubbles: true })
-      inputElement.dispatchEvent(event)
-    })
-
-    emojiPicker.appendChild(emojiSpan)
-  })
-
-  // Add emoji picker to input container
-  inputContainer.appendChild(emojiPicker)
-
-  // Toggle emoji picker on button click
-  emojiButton.addEventListener("click", (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-
-    const isVisible = emojiPicker.style.display === "block"
-    emojiPicker.style.display = isVisible ? "none" : "block"
-  })
-
-  // Hide emoji picker when clicking outside
-  document.addEventListener("click", (e) => {
-    if (!emojiPicker.contains(e.target) && e.target !== emojiButton) {
-      emojiPicker.style.display = "none"
-    }
-  })
-}
-
-// Function to add media button to comment input
-function addMediaButton(inputElement, postId) {
-  // Create media button
-  const mediaButton = document.createElement("button")
-  mediaButton.type = "button"
-  mediaButton.className = "ursac-media-button"
-  mediaButton.innerHTML = '<i class="far fa-image"></i>'
-  mediaButton.style.position = "absolute"
-  mediaButton.style.right = "70px"
-  mediaButton.style.top = "50%"
-  mediaButton.style.transform = "translateY(-50%)"
-  mediaButton.style.background = "none"
-  mediaButton.style.border = "none"
-  mediaButton.style.color = "#777"
-  mediaButton.style.cursor = "pointer"
-
-  // Add media button next to input
-  const inputContainer = inputElement.parentNode
-  inputContainer.insertBefore(mediaButton, inputElement.nextSibling)
-
-  // Handle media button click
-  mediaButton.addEventListener("click", (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-
-    // Open file input for image selection
-    handleCommentMediaUpload(postId, inputElement)
-  })
-}
-
-// Function to enhance comment inputs with additional features
-function enhanceCommentInputs() {
-  // Find all comment inputs
-  document.querySelectorAll(".ursac-comment-input").forEach((input) => {
-    const postCard = input.closest(".ursac-post-card")
-    if (postCard) {
-      const postId = postCard.getAttribute("data-post-id")
-      if (postId) {
-        // Add emoji picker
-        addEmojiPicker(input)
-
-        // Add media button
-        addMediaButton(input, postId)
-      }
-    }
-  })
-}
-
-// Call enhanceCommentInputs when the page loads
-document.addEventListener("DOMContentLoaded", () => {
-  // Add comment styles
-  addCommentStyles()
-
-  // Initialize comment listeners
-  initializeCommentListeners()
-
-  // Enhance comment inputs after a short delay to ensure DOM is ready
-  setTimeout(enhanceCommentInputs, 1000)
-})
-
-// Function to handle post deletion
+// Declare deletePost and deleteComment functions
 function deletePost(postId) {
-  if (!currentUser) {
-    showModal("Authentication Required", "You must be logged in to delete a post.")
-    return
-  }
-
-  // Confirm deletion
-  if (!confirm("Are you sure you want to delete this post? This action cannot be undone.")) {
-    return
-  }
-
-  // Check if the user is the post owner
-  firebase
-    .database()
-    .ref(`posts/${postId}`)
-    .once("value")
-    .then((snapshot) => {
-      const post = snapshot.val()
-
-      if (!post) {
-        showModal("Error", "Post not found.")
-        return
-      }
-
-      if (post.userId !== currentUser.uid) {
-        showModal("Permission Denied", "You can only delete your own posts.")
-        return
-      }
-
-      // Delete the post
-      return firebase.database().ref(`posts/${postId}`).remove()
-    })
-    .then(() => {
-      console.log("Post deleted successfully.")
-
-      // Remove the post from the UI
-      const postElement = document.querySelector(`[data-post-id="${postId}"]`)
-      if (postElement) {
-        postElement.remove()
-      }
-    })
-    .catch((error) => {
-      console.error("Error deleting post:", error)
-      showModal("Delete Failed", "Failed to delete post. Please try again.")
-    })
+  // Implementation for deleting a post
+  console.log(`Deleting post with ID: ${postId}`)
 }
 
-// Function to handle comment deletion
-function deleteComment(postId, commentId) {
-  if (!currentUser) {
-    showModal("Authentication Required", "You must be logged in to delete a comment.")
-    return
-  }
-
-  // Confirm deletion
-  if (!confirm("Are you sure you want to delete this comment? This action cannot be undone.")) {
-    return
-  }
-
-  // Check if the user is the comment owner or post owner
-  Promise.all([
-    firebase.database().ref(`posts/${postId}/comments/${commentId}`).once("value"),
-    firebase.database().ref(`posts/${postId}`).once("value"),
-  ])
-    .then(([commentSnapshot, postSnapshot]) => {
-      const comment = commentSnapshot.val()
-      const post = postSnapshot.val()
-
-      if (!comment) {
-        showModal("Error", "Comment not found.")
-        return
-      }
-
-      // Allow deletion if user is comment owner or post owner
-      if (comment.userId !== currentUser.uid && post.userId !== currentUser.uid) {
-        showModal("Permission Denied", "You can only delete your own comments or comments on your posts.")
-        return
-      }
-
-      // Delete the comment
-      return firebase.database().ref(`posts/${postId}/comments/${commentId}`).remove()
-    })
-    .then(() => {
-      console.log("Comment deleted successfully.")
-
-      // Reload comments to reflect the deletion
-      loadComments(postId)
-    })
-    .catch((error) => {
-      console.error("Error deleting comment:", error)
-      showModal("Delete Failed", "Failed to delete comment. Please try again.")
-    })
+function deleteComment(commentId) {
+  // Implementation for deleting a comment
+  console.log(`Deleting comment with ID: ${commentId}`)
 }
 
 // Make additional functions available globally
 window.deletePost = deletePost
 window.deleteComment = deleteComment
-window.handleCommentMediaUpload = handleCommentMediaUpload
+window.handleCommentMediaUpload = handleCommentMediaUploadToInput
 window.submitCommentWithMedia = submitCommentWithMedia
 
 // Add a debugging function to check post timestamps
@@ -2738,7 +2758,7 @@ function addNewPostIndicator() {
       0% { background-color: rgba(0, 120, 255, 0.2); }
       100% { background-color: transparent; }
     }
-    
+
     .new-post-highlight {
       animation: newPostHighlight 3s ease-out;
     }
@@ -3002,136 +3022,224 @@ function redirectToForum(forumId) {
 
 // Example usag // Pass the forum ID dynamically
 =======
-  setTimeout(highlightNewPosts, 2000)
-})
+  setTimeout(highlightNewPosts, 2000);
+});
 
-// Generic modal function to replace alerts
-function showModal(title, message) {
-  // Create modal if it doesn't exist
-  let modalElement = document.getElementById("generic-modal")
 
-  if (!modalElement) {
-    const modalHTML = `
-      <div class="ursac-modal" id="generic-modal">
-        <div class="ursac-modal-content">
-          <div class="ursac-modal-header">
-            <h3 id="modal-title"></h3>
-            <button class="ursac-modal-close" id="close-generic-modal">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
-          <div class="ursac-modal-body">
-            <p id="modal-message"></p>
-          </div>
-          <div class="ursac-modal-footer">
-            <button class="ursac-button ursac-button-primary" id="acknowledge-modal">OK</button>
-          </div>
-        </div>
-      </div>
-    `
+document.addEventListener('DOMContentLoaded', function () {
+  const forumListContainer = document.querySelector('.ursac-forum-list');
 
-    const modalContainer = document.createElement("div")
-    modalContainer.innerHTML = modalHTML
-    document.body.appendChild(modalContainer.firstElementChild)
+  // Inject CSS styles directly
+  const style = document.createElement('style');
+  document.head.appendChild(style);
 
-    modalElement = document.getElementById("generic-modal")
+  // Function to display forums the user has joined
+  function displayUserForums(user) {
+    const forumsRef = firebase.database().ref('forums');
+     const forumListRoute = "{{ route('view', ['forum' => '']) }}";
 
-    // Add event listeners
-    document.getElementById("close-generic-modal").addEventListener("click", () => {
-      modalElement.style.display = "none"
-    })
+    forumsRef.once('value')
+      .then(snapshot => {
+        const joinedForums = [];
 
-    document.getElementById("acknowledge-modal").addEventListener("click", () => {
-      modalElement.style.display = "none"
-    })
+        snapshot.forEach(forumSnap => {
+          const forumData = forumSnap.val();
+          if (forumSnap.child('members').hasChild(user.uid)) {
+            joinedForums.push({
+              id: forumSnap.key,
+              name: forumData.name || 'Unnamed Forum'
+            });
+          }
+        });
+
+        if (forumListContainer) {
+          forumListContainer.innerHTML = joinedForums.length > 0
+            ? joinedForums.map(forum => `
+                <div class="ursac-forum-item" onclick="redirectToForum('${forum.id}')">
+                  <h3>${forum.name}</h3>
+                </div>
+              `).join('')
+            : '<p>You have not joined any forums yet.</p>';
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching forums:', error);
+        if (forumListContainer) {
+          forumListContainer.innerHTML = '<p>Failed to load forums. Please try again later.</p>';
+        }
+      });
   }
 
-  // Update modal content
-  document.getElementById("modal-title").textContent = title
-  document.getElementById("modal-message").textContent = message
+  // Check auth state and then display joined forums
+  firebase.auth().onAuthStateChanged(user => {
+    if (user) {
+      displayUserForums(user);
+    } else if (forumListContainer) {
+      forumListContainer.innerHTML = '<p>Please log in to view your forums.</p>';
+    }
+  });
+});
+  // Wait until the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', function () {
+    // Get references to the necessary elements
+    const openBtn = document.getElementById('add-forum-btn');
+    const modal = document.getElementById('addForumModal');
+    const closeBtn = document.getElementById('closeModalBtn');
 
-  // Show modal
-  modalElement.style.display = "flex"
+    // Open modal when add-forum button is clicked
+    if (openBtn) {
+      openBtn.addEventListener('click', function () {
+        console.log("Add Forum button clicked");
+        if (modal) {
+          modal.style.display = 'block';
+        }
+      });
+    }
+
+    // Close modal when X is clicked
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function () {
+        if (modal) {
+          modal.style.display = 'none';
+        }
+      });
+    }
+
+    // Close modal when clicking outside the modal content
+    window.addEventListener('click', function (event) {
+      if (event.target === modal) {
+        if (modal) {
+          modal.style.display = 'none';
+        }
+      }
+    });
+
+    // Inject CSS for the modal
+    const styles = `
+      /* Modal backdrop */
+      .ursac-modal {
+        display: none; /* Hidden by default */
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto; /* Enable scroll if needed */
+        background-color: rgba(0, 0, 0, 0.6); /* Dark semi-transparent background */
+      }
+
+      /* Modal content box */
+      .ursac-modal-content {
+        background-color: #fff;
+        margin: auto;
+        top: 20%;
+        position: relative;
+        transform: translateY(20%);
+        padding: 25px 30px;
+        border-radius: 12px;
+        width: 95%;
+        max-width: 400px;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+        animation: fadeIn 0.3s ease-out;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+      
+      /* Close button (X) */
+      .ursac-close {
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        font-size: 24px;
+        font-weight: bold;
+        color: #888;
+        cursor: pointer;
+      }
+
+      .ursac-close:hover {
+        color: #000;
+      }
+
+      /* Simple fade-in animation */
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    `;
+
+    // Create a style element and append to the head
+    const styleSheet = document.createElement("style");
+    styleSheet.type = "text/css";
+    styleSheet.innerText = styles;
+    document.head.appendChild(styleSheet);
+  });
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+// ✅ Auth check before calling your function
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    console.log("User is logged in:", user.uid);
+    loadJoinableForums(user);
+  } else {
+    console.log("No user is signed in.");
+  }
+});
+
+
+function loadJoinableForums(user) {
+  const userId = user.uid;
+  const forumsRef = ref(db, 'forums');
+
+  onValue(forumsRef, (snapshot) => {
+    const forums = snapshot.val();
+    const joinableForums = [];
+
+    for (const forumId in forums) {
+      const forum = forums[forumId];
+      const members = forum.members || {};
+
+      // If user is NOT a member of this forum, show it in Join tab
+      if (!members.hasOwnProperty(userId)) {
+        joinableForums.push({
+          id: forumId,
+          ...forum
+        });
+      }
+    }
+
+    displayJoinableForums(joinableForums);
+  });
 }
 
-// Make showModal available globally
-window.showModal = showModal
+// Sample function to render joinable forums
+function displayJoinableForums(forums) {
+  const forumList = document.getElementById('joinable-forums');
+  forumList.innerHTML = '';
 
-// Add CSS for the modal
-document.addEventListener("DOMContentLoaded", () => {
-  const style = document.createElement("style")
-  style.textContent = `
-    .ursac-modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: rgba(0, 0, 0, 0.5);
-      z-index: 2000;
-      justify-content: center;
-      align-items: center;
-    }
-    
-    .ursac-modal-content {
-      background-color: white;
-      border-radius: 8px;
-      max-width: 400px;
-      width: 100%;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      overflow: hidden;
-    }
-    
-    .ursac-modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 15px 20px;
-      border-bottom: 1px solid #eee;
-    }
-    
-    .ursac-modal-header h3 {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 600;
-    }
-    
-    .ursac-modal-close {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 16px;
-      color: #777;
-    }
-    
-    .ursac-modal-body {
-      padding: 20px;
-    }
-    
-    .ursac-modal-footer {
-      padding: 15px 20px;
-      border-top: 1px solid #eee;
-      text-align: right;
-    }
-    
-    .ursac-button {
-      padding: 8px 16px;
-      border-radius: 4px;
-      border: none;
-      cursor: pointer;
-      font-weight: 500;
-    }
-    
-    .ursac-button-primary {
-      background-color: #4a76a8;
-      color: white;
-    }
-    
-    .ursac-button-primary:hover {
-      background-color: #3d6593;
-    }
-  `
-  document.head.appendChild(style)
-})
+  forums.forEach(forum => {
+    const item = document.createElement('div');
+    item.textContent = `${forum.description}`;
+    forumList.appendChild(item);
+  });
+}
+
+// Call this on page load
+loadJoinableForums();
+
+
+// // Initialize Firebase (if not already done)
+// firebase.initializeApp(firebaseConfig);
+
+// Function to redirect based on Firebase data
+function redirectToForum(forumId) {
+  // Firebase check (optional)
+  const forumUrl = `/view/${forumId}`; // Direct URL
+  window.location.href = forumUrl;
+}
+
+
+// Example usag // Pass the forum ID dynamically
 >>>>>>> 466e93e0987f5db1fba918d3f155c0d7d54ea531

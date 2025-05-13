@@ -175,20 +175,16 @@
         <i class="fas fa-plus-circle" style="color: var(--primary-color); font-size: 1.2em;"></i>
         </button>
         </h3>
-        <div id="addForumModal" class="ursac-modal">
-          <div class="ursac-modal-content">
-            <span id="closeModalBtn" class="ursac-close">&times;</span>
-            <a href="{{ route('join') }}" class="ursac-button ursac-button-primary" id="join-forum-btn">
-              <i class="fas fa-sign-in-alt"></i>
-              <span>Join a Forum</span>
-            </a>
-            <a href="{{ route('create') }}" class="ursac-button ursac-button-secondary" id="create-forum-btn">
+        <div id="addForumModal" class="custom-modal">
+          <div class="custom-modal-box">
+            <span id="closeModalBtn" class="custom-close">&times;</span>
+              <a href="{{ route('join') }}" class="custom-button custom-button-primary" id="join-forum-btn">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>Join a Forum</span>
+              </a>
+            <a href="{{ route('create') }}" class="custom-button custom-button-secondary" id="create-forum-btn">
               <i class="fas fa-plus-circle"></i>
               <span>Create Your Forum</span>
-            </a>
-            <a href="{{ route('view') }}" class="ursac-button ursac-button-tertiary" id="view-forum-btn">
-              <i class="fas fa-eye"></i>
-              <span>View Your Forum</span>
             </a>
           </div>
         </div>
