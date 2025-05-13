@@ -124,6 +124,9 @@ const prohibitedWords = [
   "bilat",
   "kantot",
   "iyot",
+  "tarub",
+  "siraulo",
+  
 
   // English bad words
   "stupid",
@@ -144,6 +147,8 @@ const prohibitedWords = [
   "pussy",
   "whore",
   "ass",
+  "nigga", 
+  "nigger",
 ]
 
 // Profanity Filter - Check if text contains prohibited words
