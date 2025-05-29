@@ -8,7 +8,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="main.css">
-  
 </head>
 <body>
   <div class="ursac-container">
@@ -32,14 +31,12 @@
           <i class="fas fa-comment"></i>
           <span>Messages</span>
         </a>
-
         <a href="{{ route('profile') }}" class="ursac-menu-item">
           <i class="fas fa-user"></i>
           <span>Profile</span>
         </a>
         
-        
-        <!-- Post Button (After Settings) -->
+        <!-- Post Button -->
         <button class="ursac-sidebar-post-btn" id="open-post-modal">
           <i class="fas fa-plus"></i>
           <span>Post</span>
@@ -75,7 +72,6 @@
         <div class="ursac-tab ursac-tab-active">Posts</div>
       </div>
       
-      
       <!-- Create Post -->
       <div class="ursac-create-post">
         <div class="ursac-create-post-header">
@@ -85,7 +81,8 @@
             </div>
             <div class="ursac-create-post-username" id="create-post-username">User</div>
           </div>
-          <input type="text" class="ursac-post-input" id="post-input" placeholder="Write a Post" />
+          <!-- FIXED: Changed from post-input to postForm -->
+          <input type="text" class="ursac-post-input" id="postForm" placeholder="Write a Post" />
         </div>
         
         <!-- Expanded post area -->
@@ -121,47 +118,9 @@
         </div>
       </div>
       
-      <!-- Posts Feed -->
-      <div class="ursac-posts-feed" id="posts-feed">
-        <div class="ursac-post-card">
-          <!-- ... existing post content ... -->
-          
-          <div class="ursac-post-footer">
-            <div class="ursac-post-stat" onclick="likePost('${postId}')">
-              <i class="far fa-thumbs-up"></i>
-              <span class="like-count">0</span>
-            </div>
-            <div class="ursac-post-stat" onclick="toggleComments(this)">
-              <i class="far fa-comment"></i>
-              <span class="comment-count">0</span>
-            </div>
-            <div class="ursac-post-stat" onclick="sharePost('${postId}')">
-              <i class="far fa-share-square"></i>
-            </div>
-          </div>
-
-          <!-- Add comment section -->
-          <div class="ursac-post-comments" style="display: none;">
-            <!-- This div will be populated with the post owner's name -->
-            <div class="ursac-comment-input-wrapper">
-              <div class="ursac-comment-avatar">
-                <!-- User initials will be added dynamically -->
-              </div>
-              <div class="ursac-comment-input-container">
-                <input type="text" class="ursac-comment-input" placeholder="Write a comment...">
-                <button class="ursac-comment-submit">
-                  <i class="fas fa-paper-plane"></i>
-                </button>
-              </div>
-            </div>
-            
-            <div class="ursac-comments-list">
-              <div class="ursac-no-comments">
-                No comments yet. Be the first to comment!
-              </div>
-            </div>
-          </div>
-        </div>
+      <!-- Posts Feed - FIXED: Changed from posts-feed to postsContainer -->
+      <div class="ursac-posts-feed" id="postsContainer">
+        <!-- Posts will be dynamically loaded here via Firebase listeners -->
       </div>
     </div>
     
@@ -172,16 +131,18 @@
         <h3 class="ursac-sidebar-title">
           Forums
           <button class="ursac-add-forum-btn" id="add-forum-btn" style="float: right; background: none; border: none; cursor: pointer;">
-        <i class="fas fa-plus-circle" style="color: var(--primary-color); font-size: 1.2em;"></i>
-        </button>
+            <i class="fas fa-plus-circle" style="color: var(--primary-color); font-size: 1.2em;"></i>
+          </button>
         </h3>
+        
+        <!-- Forum Modal -->
         <div id="addForumModal" class="custom-modal">
           <div class="custom-modal-box">
             <span id="closeModalBtn" class="custom-close">&times;</span>
-              <a href="{{ route('join') }}" class="custom-button custom-button-primary" id="join-forum-btn">
-                <i class="fas fa-sign-in-alt"></i>
-                <span>Join a Forum</span>
-              </a>
+            <a href="{{ route('join') }}" class="custom-button custom-button-primary" id="join-forum-btn">
+              <i class="fas fa-sign-in-alt"></i>
+              <span>Join a Forum</span>
+            </a>
             <a href="{{ route('create') }}" class="custom-button custom-button-secondary" id="create-forum-btn">
               <i class="fas fa-plus-circle"></i>
               <span>Create Your Forum</span>
@@ -189,13 +150,10 @@
           </div>
         </div>
         
-        <div class="ursac-forum-list"">
-        </div>
-      
-      
-      
-      
-
+        <div class="ursac-forum-list"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- Post Modal -->
   <div class="ursac-upload-modal" id="post-modal" style="display:none;z-index:2000;">
@@ -229,13 +187,179 @@
     </div>
   </div>
 
+  <!-- Profanity Warning Modal -->
+  <div class="ursac-modal" id="profanity-warning-modal" style="display: none;">
+    <div class="ursac-modal-content">
+      <div class="ursac-modal-header">
+        <h3>Inappropriate Language Detected</h3>
+        <button class="ursac-modal-close" id="close-profanity-modal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="ursac-modal-body">
+        <p>Your message contains inappropriate language that violates our community guidelines.</p>
+        <p>Please revise your message before sending.</p>
+        <div id="profanity-details" class="ursac-profanity-details"></div>
+      </div>
+      <div class="ursac-modal-footer">
+        <button class="ursac-button ursac-button-primary" id="acknowledge-profanity">I Understand</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generic Modal -->
+  <div class="ursac-modal" id="generic-modal" style="display: none;">
+    <div class="ursac-modal-content">
+      <div class="ursac-modal-header">
+        <h3 id="modal-title"></h3>
+        <button class="ursac-modal-close" id="close-generic-modal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="ursac-modal-body">
+        <p id="modal-message"></p>
+      </div>
+      <div class="ursac-modal-footer">
+        <button class="ursac-button ursac-button-primary" id="acknowledge-modal">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Post Template (Hidden) -->
+  <template id="post-template">
+    <div class="ursac-post-card" data-post-id="">
+      <div class="ursac-post-header">
+        <div class="ursac-profile-avatar">
+          <span class="avatar-initials"></span>
+        </div>
+        <div class="ursac-post-meta">
+          <div class="ursac-post-author"></div>
+          <div class="ursac-post-time"></div>
+        </div>
+      </div>
+      
+      <div class="ursac-post-content">
+        <p class="post-text"></p>
+        <div class="ursac-post-media" style="display: none;"></div>
+      </div>
+
+      <div class="ursac-post-footer">
+        <div class="ursac-post-stat like-button">
+          <i class="far fa-thumbs-up"></i>
+          <span class="like-count">0</span>
+        </div>
+        <div class="ursac-post-stat comment-button">
+          <i class="far fa-comment"></i>
+          <span class="comment-count">0</span>
+        </div>
+        <div class="ursac-post-stat share-button">
+          <i class="far fa-share-square"></i>
+        </div>
+      </div>
+
+      <!-- Comments Section -->
+      <div class="ursac-post-comments" style="display: none;">
+        <div class="ursac-comment-input-wrapper">
+          <div class="ursac-comment-avatar">
+            <span class="current-user-initials"></span>
+          </div>
+          <div class="ursac-comment-input-container">
+            <input type="text" class="ursac-comment-input" placeholder="Write a comment...">
+            <button class="ursac-comment-submit">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div class="ursac-comments-list">
+          <div class="ursac-no-comments">
+            No comments yet. Be the first to comment!
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Comment Template (Hidden) -->
+  <template id="comment-template">
+    <div class="ursac-comment-thread">
+      <div class="ursac-comment" data-comment-id="">
+        <div class="ursac-comment-avatar">
+          <span class="comment-avatar-initials"></span>
+        </div>
+        <div class="ursac-comment-content">
+          <div class="ursac-comment-bubble">
+            <div class="ursac-comment-header">
+              <span class="ursac-comment-username"></span>
+              <span class="ursac-comment-time"></span>
+            </div>
+            <div class="ursac-comment-text"></div>
+          </div>
+          <div class="ursac-comment-actions">
+            <button class="ursac-reply-button">
+              <i class="fas fa-reply"></i> Reply
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Reply Input Container -->
+      <div class="ursac-reply-input-container" style="display: none;">
+        <div class="ursac-comment-input-wrapper">
+          <div class="ursac-comment-avatar">
+            <span class="current-user-initials"></span>
+          </div>
+          <div class="ursac-comment-input-container">
+            <input type="text" class="ursac-reply-input" placeholder="Write a reply...">
+            <button class="ursac-reply-submit">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Replies Container -->
+      <div class="ursac-replies-container">
+        <!-- Replies will be inserted here -->
+      </div>
+
+      <!-- View More Replies Button -->
+      <div class="ursac-view-more-replies" style="display: none;">
+        <button class="ursac-view-more-btn">
+          <i class="fas fa-chevron-down"></i>
+          View <span class="remaining-count">0</span> more replies
+        </button>
+      </div>
+    </div>
+  </template>
+
+  <!-- Reply Template (Hidden) -->
+  <template id="reply-template">
+    <div class="ursac-reply" data-reply-id="">
+      <div class="ursac-reply-connector"></div>
+      <div class="ursac-comment-avatar">
+        <span class="reply-avatar-initials"></span>
+      </div>
+      <div class="ursac-comment-content">
+        <div class="ursac-comment-bubble">
+          <div class="ursac-comment-header">
+            <span class="ursac-comment-username"></span>
+            <span class="ursac-comment-time"></span>
+          </div>
+          <div class="ursac-comment-text"></div>
+        </div>
+      </div>
+    </div>
+  </template>
+
   <!-- Scripts -->
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-storage.js"></script>
+  
   <script>
-    // Your web app's Firebase configuration
+    // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyAZ6EzZLpBIUlTjFm7ZUBfMMkmslIOeMFg",
       authDomain: "social-media-8c5ba.firebaseapp.com",
@@ -250,47 +374,10 @@
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
   </script>
-  <script>
-  // Debug functions
-  function debugFirebaseConnection() {
-    try {
-      const app = firebase.app();
-      console.log("Firebase successfully initialized");
-      
-      // Add this to check auth state
-      firebase.auth().onAuthStateChanged(function(user) {
-        console.log("Auth state changed:", user ? "User logged in" : "No user");
-      });
-    } catch (error) {
-      console.error("Firebase initialization error:", error);
-    }
-  }
-
-  // Run debug functions when page loads
-  document.addEventListener("DOMContentLoaded", function() {
-    console.log("Running diagnostics...");
-    debugFirebaseConnection();
-   
-    
-    // Test if DOM elements exist
-    const elements = [
-      "post-input", "post-button", "posts-feed", "media-preview", 
-      "file-photo", "file-video", "file-attachment", "user-profile-btn",
-      "user-profile-dropdown", "logout-btn", "add-account-btn", "open-post-modal"
-    ];
-    
-    elements.forEach(id => {
-      const el = document.getElementById(id);
-      console.log(`Element #${id} ${el ? "exists" : "MISSING!"}`);
-    });
-  });
-</script>
+  
+  <script src="comments.js"></script>
   <script src="script.js"></script>
-<<<<<<< HEAD
-  <script type="module" src="notifications.js"></script>
-=======
   <script src="notifications.js"></script>
   <script src="messages.js"></script>
->>>>>>> 466e93e0987f5db1fba918d3f155c0d7d54ea531
 </body>
 </html>
