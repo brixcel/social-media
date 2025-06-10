@@ -165,7 +165,7 @@
     </div>
     
     <!-- Right Sidebar -->
-  <<div class="ursac-sidebar-right">
+    <div class="ursac-sidebar-right">
       <!-- Forums Section -->
       <div class="ursac-sidebar-section" id="forum-section">
         <h3 class="ursac-sidebar-title">
@@ -187,11 +187,11 @@
             </a>
           </div>
         </div>  
-        <div class="ursac-forum-list"">
+        <div class="ursac-forum-list">
         </div>
-      
->>>>>>> 466e93e0987f5db1fba918d3f155c0d7d54ea531
-      
+      </div>
+    </div>
+  </div>
       
   <!-- New Message Modal -->
   <div class="ursac-modal" id="new-message-modal">

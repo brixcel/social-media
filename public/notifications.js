@@ -150,116 +150,99 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function updateNotificationsUI(notifications) {
-  if (!notificationsFeed) return;;
+    if (!notificationsFeed) return
 
-  // First, fetch all user data needed for these notifications
-  const userIds = [...new Set(notifications.map(notif => notif.userId))];
-  
-  // Fetch user data for all users in the notifications
-  Promise.all(
-    userIds.map(userId => {
-      // Check if we already have this user's data in cache
-      if (userDataCache[userId]) {
-        return Promise.resolve(userDataCache[userId]);
-      }
-      
-      // Fetch user data from Firebase
-      return firebase.database().ref(`users/${userId}`).once('value')
-        .then(snapshot => {
-          const userData = snapshot.val();
-          if (userData) {
-            // Store in cache for future use
-            userDataCache[userId] = userData;
-            return userData;
-          }
-          return null;
-        });
-    })
-  ).then(() => {
-    // Now render notifications with user data
-    notificationsFeed.innerHTML = notifications.map(notif => {
-      let notifContent = '';
-      let categoryIcon = '';
-      const userData = userDataCache[notif.userId] || { firstName: 'Unknown', lastName: 'User' };
-      const userName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
-      
-      if (notif.type === 'comment') {
-        categoryIcon = '<i class="fas fa-comment"></i>';
-        notifContent = `
+    // First, fetch all user data needed for these notifications
+    const userIds = [...new Set(notifications.map((notif) => notif.userId))]
+
+    // Fetch user data for all users in the notifications
+    Promise.all(
+      userIds.map((userId) => {
+        // Check if we already have this user's data in cache
+        if (userDataCache[userId]) {
+          return Promise.resolve(userDataCache[userId])
+        }
+
+        // Fetch user data from Firebase
+        return firebase
+          .database()
+          .ref(`users/${userId}`)
+          .once("value")
+          .then((snapshot) => {
+            const userData = snapshot.val()
+            if (userData) {
+              // Store in cache for future use
+              userDataCache[userId] = userData
+              return userData
+            }
+            return null
+          })
+      }),
+    ).then(() => {
+      // Now render notifications with user data
+      notificationsFeed.innerHTML = notifications
+        .map((notif) => {
+          let notifContent = ""
+          let categoryIcon = ""
+          const userData = userDataCache[notif.userId] || { firstName: "Unknown", lastName: "User" }
+          const userName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+
+          if (notif.type === "comment") {
+            categoryIcon = '<i class="fas fa-comment"></i>'
+            notifContent = `
           <strong>${userName}</strong> commented on your post:
-          <div class="ursac-notification-preview">"${(notif.commentText || '').substring(0, 50)}${(notif.commentText || '').length > 50 ? '...' : ''}"</div>
-        `;
-      } else if (notif.type === 'like') {
-        categoryIcon = '<i class="fas fa-thumbs-up"></i>';
-        notifContent = `<strong>${userName}</strong> liked your post`;
-      } else if (notif.type === 'mention') {
-        categoryIcon = '<i class="fas fa-at"></i>';
-        notifContent = `<strong>${userName}</strong> mentioned you in a comment`;
-      } else if (notif.type === 'reply') {
-        categoryIcon = '<i class="fas fa-reply"></i>';
-        notifContent = `
+          <div class="ursac-notification-preview">"${(notif.commentText || "").substring(0, 50)}${(notif.commentText || "").length > 50 ? "..." : ""}"</div>
+        `
+          } else if (notif.type === "like") {
+            categoryIcon = '<i class="fas fa-thumbs-up"></i>'
+            notifContent = `<strong>${userName}</strong> liked your post`
+          } else if (notif.type === "mention") {
+            categoryIcon = '<i class="fas fa-at"></i>'
+            notifContent = `<strong>${userName}</strong> mentioned you in a comment`
+          } else if (notif.type === "reply") {
+            categoryIcon = '<i class="fas fa-reply"></i>'
+            notifContent = `
           <strong>${userName}</strong> replied to your comment:
-          <div class="ursac-notification-preview">"${(notif.commentText || '').substring(0, 50)}${(notif.commentText || '').length > 50 ? '...' : ''}"</div>
-        `;
-      } else if (notif.type === 'forum_created') {
-        categoryIcon = '<i class="fas fa-comments"></i>';
-        notifContent = `
+          <div class="ursac-notification-preview">"${(notif.commentText || "").substring(0, 50)}${(notif.commentText || "").length > 50 ? "..." : ""}"</div>
+        `
+          } else if (notif.type === "forum_created") {
+            categoryIcon = '<i class="fas fa-comments"></i>'
+            notifContent = `
           <strong>${userName}</strong> created a new forum: 
-          <div class="ursac-notification-preview">"${(notif.message || '').substring(0, 50)}${(notif.message || '').length > 50 ? '...' : ''}"</div>
-        `;
-      } else if (notif.type === 'forum_joined') { // Handling 'forum_joined' notification
-        categoryIcon = '<i class="fas fa-users"></i>';  // Icon for joining forum
-        notifContent = `
+          <div class="ursac-notification-preview">"${(notif.message || "").substring(0, 50)}${(notif.message || "").length > 50 ? "..." : ""}"</div>
+        `
+          } else if (notif.type === "forum_joined") {
+            categoryIcon = '<i class="fas fa-users"></i>'
+            notifContent = `
           <strong>${userName}</strong> joined the forum: 
-          <div class="ursac-notification-preview">"${(notif.message || '').substring(0, 50)}${(notif.message || '').length > 50 ? '...' : ''}"</div>
-        `;
-      }
-
-
-          // Create action buttons based on notification type
-          let actionButtons = ""
-
-          if (notif.type === "message") {
-            actionButtons = `
-            <button class="ursac-view-button" onclick="handleMessageNotificationClick('${notif.id}', '${notif.conversationId}', '${notif.userId}', '${notif.messageId || ""}')">View</button>
-          `
-          } else if (notif.type === "like" || notif.type === "comment" || notif.type === "reply" || notif.type === "mention") {
-            actionButtons = `
-            <button class="ursac-view-button" onclick="handlePostNotificationClick('${notif.id}', '${notif.postId}', '${notif.type}', '${notif.commentId || ""}')">View</button>
-          `
-          } else {
-            actionButtons = `
-            <button class="ursac-view-button" onclick="handleNotificationClick('${notif.id}', '${notif.postId}')">View</button>
-          `
+          <div class="ursac-notification-preview">"${(notif.message || "").substring(0, 50)}${(notif.message || "").length > 50 ? "..." : ""}"</div>
+        `
           }
 
-          if (!notif.read) {
-            actionButtons += `<button class="ursac-mark-read-button" onclick="markNotificationAsRead('${notif.id}', event)">Mark as read</button>`
-          }
-
-        return `
-          <div class="ursac-notification-item ${notif.read ? '' : 'unread'}" 
-               data-notification-id="${notif.id}" 
-               data-post-id="${notif.postId}">
-            <div class="ursac-notification-icon">
-              ${categoryIcon}
+          return `
+        <div class="ursac-notification-item ${notif.read ? "" : "unread"}" 
+             data-notification-id="${notif.id}" 
+             data-post-id="${notif.postId}">
+          <div class="ursac-notification-icon">
+            ${categoryIcon}
+          </div>
+          <div class="ursac-notification-content">
+            <div class="ursac-notification-text">
+              ${notifContent}
             </div>
-            <div class="ursac-notification-content">
-              <div class="ursac-notification-text">
-                ${notifContent}
-              </div>
-              <div class="ursac-notification-meta">
-                <span class="ursac-notification-time">${formatTimeAgo(notif.timestamp)}</span>
-              </div>
-            </div>
-            <div class="ursac-notification-actions">
-              <button class="ursac-view-button" onclick="handleNotificationClick('${notif.id}', '${notif.postId}')">View</button>
-              ${!notif.read ? `<button class="ursac-mark-read-button" onclick="markNotificationAsRead('${notif.id}', event)">Mark as read</button>` : ''}
+            <div class="ursac-notification-meta">
+              <span class="ursac-notification-time">${formatTimeAgo(notif.timestamp)}</span>
             </div>
           </div>
-        `;
-      }).join('');
-    });
+          <div class="ursac-notification-actions">
+            <button class="ursac-view-button" onclick="event.preventDefault(); event.stopPropagation(); handleNotificationView('${notif.id}', '${notif.postId}', '${notif.type}', '${notif.commentId || ""}', '${notif.userId}');">View</button>
+            ${!notif.read ? `<button class="ursac-mark-read-button" onclick="event.preventDefault(); event.stopPropagation(); markNotificationAsRead('${notif.id}', event);">Mark as read</button>` : ""}
+          </div>
+        </div>
+      `
+        })
+        .join("")
+    })
   }
 
   function updateNotificationBadge(count) {
@@ -313,151 +296,360 @@ document.addEventListener("DOMContentLoaded", () => {
   // Set up mark all as read button
   if (markAllReadBtn) {
     markAllReadBtn.addEventListener("click", () => {
-      markAllNotificationsAsRead()
+      window.markAllNotificationsAsRead()
     })
   }
 
-  // Check if we're on the homepage and need to highlight a post
-  function checkForPostHighlight() {
-    const urlParams = new URLSearchParams(window.location.search)
-    const highlightPostId = urlParams.get("highlight")
-    const highlightCommentId = urlParams.get("comment")
+  // Function to handle notification view - redirects to homepage with modal
+  window.handleNotificationView = async (notificationId, postId, notificationType, commentId, userId) => {
+    console.log("Handling notification view:", { notificationId, postId, notificationType, commentId, userId })
 
-    if (highlightPostId) {
-      // Find the post element
-      const postElement = document.querySelector(`.ursac-post-card[data-post-id="${highlightPostId}"]`)
+    if (!currentUser) {
+      console.error("No current user")
+      return
+    }
 
-      if (postElement) {
-        // Scroll to the post
-        postElement.scrollIntoView({ behavior: "smooth", block: "center" })
+    try {
+      // Mark notification as read first
+      await firebase.database().ref(`notifications/${currentUser.uid}/${notificationId}`).update({ read: true })
 
-        // Highlight the post
-        postElement.classList.add("ursac-post-highlight")
-
-        // Remove highlight after animation completes
-        setTimeout(() => {
-          postElement.classList.remove("ursac-post-highlight")
-        }, 2000)
-
-        // If there's a specific comment to highlight
-        if (highlightCommentId) {
-          setTimeout(() => {
-            const commentElement = document.querySelector(`.ursac-comment[data-comment-id="${highlightCommentId}"]`)
-            if (commentElement) {
-              // Expand comments section if it's collapsed
-              const commentsSection = postElement.querySelector(".ursac-post-comments")
-              if (commentsSection && commentsSection.style.display === "none") {
-                const commentToggle = postElement.querySelector('.ursac-post-stat[data-action="comment"]')
-                if (commentToggle) {
-                  commentToggle.click()
-                }
-              }
-
-              // Scroll to the comment
-              commentElement.scrollIntoView({ behavior: "smooth", block: "center" })
-
-              // Highlight the comment
-              commentElement.classList.add("ursac-comment-highlight")
-
-              // Remove highlight after animation completes
-              setTimeout(() => {
-                commentElement.classList.remove("ursac-comment-highlight")
-              }, 2000)
-            }
-          }, 500) // Small delay to ensure comments are loaded
-        }
-
-        // Clean up the URL
-        const newUrl = window.location.pathname
-        window.history.replaceState({}, document.title, newUrl)
+      // Store notification data in sessionStorage for the homepage to use
+      const notificationData = {
+        notificationId,
+        postId,
+        notificationType,
+        commentId,
+        userId,
+        timestamp: Date.now(),
       }
+
+      sessionStorage.setItem("pendingNotificationModal", JSON.stringify(notificationData))
+
+      // Redirect to homepage with parameters
+      const params = new URLSearchParams({
+        showPost: postId,
+        notificationType: notificationType,
+        notificationId: notificationId,
+      })
+
+      if (commentId) {
+        params.append("commentId", commentId)
+      }
+
+      if (userId) {
+        params.append("userId", userId)
+      }
+
+      // Navigate to homepage
+      window.location.href = `/homepage?${params.toString()}`
+    } catch (error) {
+      console.error("Error handling notification view:", error)
     }
   }
 
-  // Expose these functions globally
-  window.handleNotificationClick = (notificationId, postId) => {
-    if (!currentUser) return
+  // Function to check if we're on homepage and should show modal
+  window.checkForNotificationModal = () => {
+    // Check if we're on the homepage
+    if (window.location.pathname !== "/homepage" && window.location.pathname !== "/") {
+      return
+    }
 
-    // Mark notification as read
-    firebase
-      .database()
-      .ref(`notifications/${currentUser.uid}/${notificationId}`)
-      .update({ read: true })
-      .then(() => {
-        // Navigate to the post page with the post highlighted
-        window.location.href = `/homepage?highlight=${postId}`
-      })
-      .catch((error) => {
-        // Error handling
-      })
+    // Check URL parameters
+    const urlParams = new URLSearchParams(window.location.search)
+    const showPostId = urlParams.get("showPost")
+    const notificationType = urlParams.get("notificationType")
+    const notificationId = urlParams.get("notificationId")
+    const commentId = urlParams.get("commentId")
+    const userId = urlParams.get("userId")
+
+    // Check sessionStorage for notification data
+    const pendingModalData = sessionStorage.getItem("pendingNotificationModal")
+
+    if (showPostId && notificationType && (pendingModalData || notificationId)) {
+      let modalData
+
+      if (pendingModalData) {
+        modalData = JSON.parse(pendingModalData)
+        sessionStorage.removeItem("pendingNotificationModal")
+      } else {
+        modalData = {
+          notificationId,
+          postId: showPostId,
+          notificationType,
+          commentId,
+          userId,
+        }
+      }
+
+      // Small delay to ensure homepage is fully loaded
+      setTimeout(() => {
+        window.openPostModalOnHomepage(modalData)
+
+        // Clean up URL parameters
+        const newUrl = window.location.pathname
+        window.history.replaceState({}, document.title, newUrl)
+      }, 500)
+    }
+  }
+
+  // Function to open post modal on homepage
+  window.openPostModalOnHomepage = async (modalData) => {
+    const { notificationId, postId, notificationType, commentId, userId } = modalData
+
+    console.log("Opening post modal on homepage:", modalData)
+
+    // Create modal if it doesn't exist
+    createPostModal()
+
+    const modal = document.getElementById("post-modal")
+    if (!modal) {
+      console.error("Modal not found after creation")
+      return
+    }
+
+    const modalBody = modal.querySelector(".post-modal-body")
+    const modalLoading = modal.querySelector(".post-modal-loading")
+    const modalError = modal.querySelector(".post-modal-error")
+    const contextIcon = modal.querySelector(".notification-context-icon")
+    const contextText = modal.querySelector(".notification-context-text")
+
+    // Show modal and loading state
+    modal.style.display = "flex"
+    modalLoading.style.display = "block"
+    modalBody.style.display = "none"
+    modalError.style.display = "none"
+
+    try {
+      // Fetch post data
+      console.log("Fetching post data for:", postId)
+      const postSnapshot = await firebase.database().ref(`posts/${postId}`).once("value")
+      const postData = postSnapshot.val()
+
+      if (!postData) {
+        throw new Error("Post not found")
+      }
+
+      // Fetch post author data
+      const authorSnapshot = await firebase.database().ref(`users/${postData.userId}`).once("value")
+      const authorData = authorSnapshot.val() || { firstName: "Unknown", lastName: "User" }
+
+      // Fetch notification user data for context
+      let notificationUserData = { firstName: "Unknown", lastName: "User" }
+      if (userId) {
+        const userSnapshot = await firebase.database().ref(`users/${userId}`).once("value")
+        notificationUserData = userSnapshot.val() || notificationUserData
+      }
+
+      // Set notification context
+      const userName = `${notificationUserData.firstName || ""} ${notificationUserData.lastName || ""}`.trim()
+      let contextHTML = ""
+      let iconClass = ""
+
+      switch (notificationType) {
+        case "like":
+          iconClass = "fas fa-thumbs-up"
+          contextHTML = `${userName} liked this post`
+          break
+        case "comment":
+          iconClass = "fas fa-comment"
+          contextHTML = `${userName} commented on this post`
+          break
+        case "reply":
+          iconClass = "fas fa-reply"
+          contextHTML = `${userName} replied to your comment`
+          break
+        case "mention":
+          iconClass = "fas fa-at"
+          contextHTML = `${userName} mentioned you in a comment`
+          break
+        default:
+          iconClass = "fas fa-bell"
+          contextHTML = "Notification"
+      }
+
+      contextIcon.className = `notification-context-icon ${iconClass}`
+      contextText.innerHTML = contextHTML
+
+      // Fetch comments if they exist
+      let commentsData = {}
+      if (postData.comments) {
+        const commentsSnapshot = await firebase.database().ref(`comments/${postId}`).once("value")
+        commentsData = commentsSnapshot.val() || {}
+      }
+
+      // Hide loading, show content
+      modalLoading.style.display = "none"
+      modalBody.style.display = "block"
+
+      // Render post content
+      modalBody.innerHTML = await renderPostInModal(postData, authorData, commentsData, commentId, notificationType)
+
+      // Scroll to highlighted comment if exists
+      if (commentId) {
+        setTimeout(() => {
+          const highlightedComment = modal.querySelector(`[data-comment-id="${commentId}"]`)
+          if (highlightedComment) {
+            highlightedComment.scrollIntoView({ behavior: "smooth", block: "center" })
+          }
+        }, 100)
+      }
+    } catch (error) {
+      console.error("Error loading post:", error)
+      modalLoading.style.display = "none"
+      modalError.style.display = "block"
+    }
+  }
+
+  // Create and inject modal HTML
+  function createPostModal() {
+    // Remove existing modal if it exists
+    const existingModal = document.getElementById("post-modal")
+    if (existingModal) {
+      existingModal.remove()
+    }
+
+    const modalHTML = `
+    <div id="post-modal" class="post-modal-overlay" style="display: none;">
+      <div class="post-modal-container">
+        <div class="post-modal-header">
+          <div class="notification-context">
+            <i class="notification-context-icon"></i>
+            <span class="notification-context-text"></span>
+          </div>
+          <button class="post-modal-close" onclick="closePostModal()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="post-modal-content">
+          <div class="post-modal-loading">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading post...</p>
+          </div>
+          <div class="post-modal-error" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>Failed to load post</p>
+            <button onclick="closePostModal()" class="retry-button">Close</button>
+          </div>
+          <div class="post-modal-body" style="display: none;">
+            <!-- Post content will be loaded here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+
+    // Insert modal into body
+    document.body.insertAdjacentHTML("beforeend", modalHTML)
+  }
+
+  // Function to render post content in modal
+  async function renderPostInModal(postData, authorData, commentsData, highlightCommentId, notificationType) {
+    const authorName = `${authorData.firstName || ""} ${authorData.lastName || ""}`.trim()
+    const postDate = new Date(postData.timestamp).toLocaleDateString()
+
+    let postContent = `
+    <div class="modal-post-card">
+      <div class="modal-post-header">
+        <div class="modal-post-author">
+          <div class="modal-author-avatar">
+            ${
+              authorData.profilePicture
+                ? `<img src="${authorData.profilePicture}" alt="${authorName}">`
+                : `<div class="modal-avatar-placeholder">${authorName.charAt(0).toUpperCase()}</div>`
+            }
+          </div>
+          <div class="modal-author-info">
+            <h4>${authorName}</h4>
+            <span class="modal-post-date">${postDate}</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-post-content">
+        <p>${postData.content || ""}</p>
+        ${postData.imageUrl ? `<img src="${postData.imageUrl}" alt="Post image" class="modal-post-image">` : ""}
+      </div>
+      <div class="modal-post-stats">
+        <span><i class="fas fa-thumbs-up"></i> ${postData.likes || 0} likes</span>
+        <span><i class="fas fa-comment"></i> ${Object.keys(commentsData).length} comments</span>
+      </div>
+    </div>
+  `
+
+    // Add comments section if there are comments
+    if (Object.keys(commentsData).length > 0) {
+      postContent += `<div class="modal-comments-section"><h5>Comments</h5>`
+
+      for (const [commentId, comment] of Object.entries(commentsData)) {
+        // Fetch commenter data
+        try {
+          const commenterSnapshot = await firebase.database().ref(`users/${comment.userId}`).once("value")
+          const commenterData = commenterSnapshot.val() || { firstName: "Unknown", lastName: "User" }
+          const commenterName = `${commenterData.firstName || ""} ${commenterData.lastName || ""}`.trim()
+
+          const isHighlighted = commentId === highlightCommentId
+          const commentDate = new Date(comment.timestamp).toLocaleDateString()
+
+          postContent += `
+          <div class="modal-comment ${isHighlighted ? "highlighted-comment" : ""}" data-comment-id="${commentId}">
+            <div class="modal-comment-author">
+              <div class="modal-commenter-avatar">
+                ${
+                  commenterData.profilePicture
+                    ? `<img src="${commenterData.profilePicture}" alt="${commenterName}">`
+                    : `<div class="modal-avatar-placeholder">${commenterName.charAt(0).toUpperCase()}</div>`
+                }
+              </div>
+              <div class="modal-comment-info">
+                <strong>${commenterName}</strong>
+                <span class="modal-comment-date">${commentDate}</span>
+              </div>
+            </div>
+            <div class="modal-comment-text">
+              ${comment.text || ""}
+            </div>
+          </div>
+        `
+        } catch (error) {
+          console.error("Error fetching commenter data:", error)
+        }
+      }
+
+      postContent += `</div>`
+    }
+
+    return postContent
+  }
+
+  // Function to close modal
+  window.closePostModal = () => {
+    const modal = document.getElementById("post-modal")
+    if (modal) {
+      modal.style.display = "none"
+    }
+  }
+
+  // Close modal when clicking outside
+  document.addEventListener("click", (event) => {
+    const modal = document.getElementById("post-modal")
+    if (modal && event.target === modal) {
+      window.closePostModal()
+    }
+  })
+
+  // Close modal with Escape key
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      window.closePostModal()
+    }
+  })
+
+  // Legacy functions for backward compatibility
+  window.handleNotificationClick = (notificationId, postId) => {
+    window.handleNotificationView(notificationId, postId, "general", "", "")
   }
 
   window.handlePostNotificationClick = (notificationId, postId, notificationType, commentId) => {
-    if (!currentUser) return
-
-    // Mark notification as read
-    firebase
-      .database()
-      .ref(`notifications/${currentUser.uid}/${notificationId}`)
-      .update({ read: true })
-      .then(() => {
-        // If we're already on the homepage
-        if (window.location.pathname === "/homepage" || window.location.pathname === "/") {
-          // Find the post element
-          const postElement = document.querySelector(`.ursac-post-card[data-post-id="${postId}"]`)
-
-          if (postElement) {
-            // Scroll to the post
-            postElement.scrollIntoView({ behavior: "smooth", block: "center" })
-
-            // Highlight the post
-            postElement.classList.add("ursac-post-highlight")
-
-            // Remove highlight after animation completes
-            setTimeout(() => {
-              postElement.classList.remove("ursac-post-highlight")
-            }, 2000)
-
-            // If it's a comment notification and we have a comment ID
-            if ((notificationType === "comment" || notificationType === "reply") && commentId) {
-              setTimeout(() => {
-                // Expand comments section if it's collapsed
-                const commentsSection = postElement.querySelector(".ursac-post-comments")
-                if (commentsSection && commentsSection.style.display === "none") {
-                  const commentToggle = postElement.querySelector('.ursac-post-stat[data-action="comment"]')
-                  if (commentToggle) {
-                    commentToggle.click()
-                  }
-                }
-
-                // Find and highlight the specific comment
-                const commentElement = document.querySelector(`.ursac-comment[data-comment-id="${commentId}"]`)
-                if (commentElement) {
-                  commentElement.scrollIntoView({ behavior: "smooth", block: "center" })
-                  commentElement.classList.add("ursac-comment-highlight")
-
-                  setTimeout(() => {
-                    commentElement.classList.remove("ursac-comment-highlight")
-                  }, 2000)
-                }
-              }, 500) // Small delay to ensure comments are loaded
-            }
-          } else {
-            // If post not found on current page, navigate to homepage with parameters
-            window.location.href = commentId
-              ? `/homepage?highlight=${postId}&comment=${commentId}`
-              : `/homepage?highlight=${postId}`
-          }
-        } else {
-          // Navigate to the homepage with parameters
-          window.location.href = commentId
-            ? `/homepage?highlight=${postId}&comment=${commentId}`
-            : `/homepage?highlight=${postId}`
-        }
-      })
-      .catch((error) => {
-        // Error handling
-      })
+    window.handleNotificationView(notificationId, postId, notificationType, commentId, "")
   }
 
   window.handleMessageNotificationClick = (notificationId, conversationId, userId, messageId) => {
@@ -480,7 +672,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       })
       .catch((error) => {
-        // Error handling
+        console.error("Error handling message notification:", error)
       })
   }
 
@@ -513,7 +705,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       })
       .catch((error) => {
-        // Error handling
+        console.error("Error marking notification as read:", error)
       })
   }
 
@@ -543,11 +735,11 @@ document.addEventListener("DOMContentLoaded", () => {
         updateNotificationBadge(0)
       })
       .catch((error) => {
-        // Error handling
+        console.error("Error marking all notifications as read:", error)
       })
   }
 
-  // Add some CSS for notification badge positioning
+  // Add CSS styles for modal and notifications
   const style = document.createElement("style")
   style.textContent = `
     .ursac-notification-indicator {
@@ -570,34 +762,299 @@ document.addEventListener("DOMContentLoaded", () => {
       padding: 0 4px;
       z-index: 100;
     }
-    .ursac-post-highlight {
-      animation: highlight-post 2s ease-out;
+    
+    /* Modal Styles */
+    .post-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
     }
-    .ursac-comment-highlight {
+    
+    .post-modal-container {
+      background: white;
+      border-radius: 12px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+    
+    .post-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+      background: #f8f9fa;
+    }
+    
+    .notification-context {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .notification-context-icon {
+      font-size: 18px;
+      color: #007bff;
+    }
+    
+    .post-modal-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #666;
+      padding: 5px;
+      border-radius: 50%;
+      transition: background-color 0.2s;
+    }
+    
+    .post-modal-close:hover {
+      background-color: #f0f0f0;
+    }
+    
+    .post-modal-content {
+      max-height: calc(80vh - 80px);
+      overflow-y: auto;
+    }
+    
+    .post-modal-loading,
+    .post-modal-error {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      color: #666;
+    }
+    
+    .post-modal-loading i {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    
+    .post-modal-error {
+      color: #dc3545;
+    }
+    
+    .modal-post-card {
+      padding: 20px;
+    }
+    
+    .modal-post-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .modal-post-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .modal-author-avatar,
+    .modal-commenter-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+    
+    .modal-author-avatar img,
+    .modal-commenter-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .modal-avatar-placeholder {
+      width: 100%;
+      height: 100%;
+      background: #007bff;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    
+    .modal-author-info h4 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    
+    .modal-post-date,
+    .modal-comment-date {
+      font-size: 12px;
+      color: #666;
+    }
+    
+    .modal-post-content {
+      margin-bottom: 15px;
+    }
+    
+    .modal-post-content p {
+      margin: 0 0 10px 0;
+      line-height: 1.5;
+    }
+    
+    .modal-post-image {
+      width: 100%;
+      max-height: 300px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    
+    .modal-post-stats {
+      display: flex;
+      gap: 20px;
+      padding: 15px 0;
+      border-bottom: 1px solid #eee;
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .modal-post-stats i {
+      margin-right: 5px;
+    }
+    
+    .modal-comments-section {
+      padding-top: 20px;
+    }
+    
+    .modal-comments-section h5 {
+      margin: 0 0 15px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    
+    .modal-comment {
+      padding: 15px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .modal-comment:last-child {
+      border-bottom: none;
+    }
+    
+    .modal-comment-author {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    
+    .modal-commenter-avatar {
+      width: 32px;
+      height: 32px;
+    }
+    
+    .modal-comment-info {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .modal-comment-info strong {
+      font-size: 14px;
+    }
+    
+    .modal-comment-text {
+      margin-left: 42px;
+      line-height: 1.4;
+    }
+    
+    .highlighted-comment {
+      background-color: rgba(255, 236, 179, 0.3);
+      border-radius: 8px;
+      padding: 15px !important;
+      margin: 10px 0;
       animation: highlight-comment 2s ease-out;
     }
-    @keyframes highlight-post {
-      0% {
-        background-color: rgba(255, 236, 179, 0.3);
-        transform: scale(1.01);
-        box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
-      }
-      100% {
-        background-color: white;
-        transform: scale(1);
-        box-shadow: var(--box-shadow);
-      }
-    }
+    
     @keyframes highlight-comment {
       0% {
-        background-color: rgba(255, 236, 179, 0.3);
+        background-color: rgba(255, 236, 179, 0.6);
       }
       100% {
-        background-color: transparent;
+        background-color: rgba(255, 236, 179, 0.3);
       }
     }
-  `;
-  document.head.appendChild(style);
+    
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .post-modal-container {
+        width: 95%;
+        max-height: 90vh;
+      }
+      
+      .post-modal-header {
+        padding: 15px;
+      }
+      
+      .modal-post-card {
+        padding: 15px;
+      }
+    }
+
+    .retry-button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .retry-button:hover {
+      background: #0056b3;
+    }
+
+    .ursac-view-button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .ursac-view-button:hover {
+      background: #0056b3;
+    }
+
+    .ursac-mark-read-button {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-left: 5px;
+    }
+
+    .ursac-mark-read-button:hover {
+      background: #545b62;
+    }
+  `
+  document.head.appendChild(style)
 
   // Make sure all notification bell icons have the proper container
   document.querySelectorAll(".notification-bell").forEach((bell) => {
@@ -640,10 +1097,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Check for post highlight parameters
-    if (window.location.pathname === "/homepage" || window.location.pathname === "/") {
-      checkForPostHighlight()
-    }
+    // Check for notification modal parameters
+    window.checkForNotificationModal()
   }
 
   // Initialize
@@ -660,13 +1115,13 @@ function setupProfileUpdateListener() {
     const userId = event.detail.userId
 
     // If this is the current user, update the UI
-    if (userId === currentUser?.uid) {
-      loadUserProfile(currentUser)
+    if (userId === window.currentUser?.uid) {
+      window.loadUserProfile(window.currentUser)
     }
   })
 
   // Listen for changes to the profileUpdates node in Firebase
-  firebase
+  window.firebase
     .database()
     .ref("profileUpdates")
     .on("child_changed", (snapshot) => {
@@ -676,7 +1131,7 @@ function setupProfileUpdateListener() {
       // Update notification items from this user
       const notificationItems = document.querySelectorAll(`.ursac-notification-item[data-user-id="${userId}"]`)
       if (notificationItems.length > 0) {
-        getUserData(userId).then((userData) => {
+        window.getUserData(userId).then((userData) => {
           notificationItems.forEach((item) => {
             const notificationText = item.querySelector(".ursac-notification-text")
             if (notificationText) {
@@ -692,4 +1147,17 @@ function setupProfileUpdateListener() {
         })
       }
     })
+}
+
+// Declare global functions
+window.checkForPostHighlight = () => {
+  // Implementation for checkForPostHighlight
+}
+
+window.loadUserProfile = (user) => {
+  // Implementation for loadUserProfile
+}
+
+window.getUserData = (userId) => {
+  // Implementation for getUserData
 }
