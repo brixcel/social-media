@@ -81,7 +81,6 @@
             </div>
             <div class="ursac-create-post-username" id="create-post-username">User</div>
           </div>
-          <!-- FIXED: Changed from post-input to postForm -->
           <input type="text" class="ursac-post-input" id="postForm" placeholder="Write a Post" />
         </div>
         
@@ -118,7 +117,7 @@
         </div>
       </div>
       
-      <!-- Posts Feed - FIXED: Changed from posts-feed to postsContainer -->
+      <!-- Posts Feed -->
       <div class="ursac-posts-feed" id="postsContainer">
         <!-- Posts will be dynamically loaded here via Firebase listeners -->
       </div>
@@ -225,159 +224,22 @@
     </div>
   </div>
 
-  <!-- Post Template (Hidden) -->
-  <template id="post-template">
-    <div class="ursac-post-card" data-post-id="">
-      <div class="ursac-post-header">
-        <div class="ursac-profile-avatar">
-          <span class="avatar-initials"></span>
-        </div>
-        <div class="ursac-post-meta">
-          <div class="ursac-post-author"></div>
-          <div class="ursac-post-time"></div>
-        </div>
-      </div>
-      
-      <div class="ursac-post-content">
-        <p class="post-text"></p>
-        <div class="ursac-post-media" style="display: none;"></div>
-      </div>
-
-      <div class="ursac-post-footer">
-        <div class="ursac-post-stat like-button">
-          <i class="far fa-thumbs-up"></i>
-          <span class="like-count">0</span>
-        </div>
-        <div class="ursac-post-stat comment-button">
-          <i class="far fa-comment"></i>
-          <span class="comment-count">0</span>
-        </div>
-        <div class="ursac-post-stat share-button">
-          <i class="far fa-share-square"></i>
-        </div>
-      </div>
-
-      <!-- Comments Section -->
-      <div class="ursac-post-comments" style="display: none;">
-        <div class="ursac-comment-input-wrapper">
-          <div class="ursac-comment-avatar">
-            <span class="current-user-initials"></span>
-          </div>
-          <div class="ursac-comment-input-container">
-            <input type="text" class="ursac-comment-input" placeholder="Write a comment...">
-            <button class="ursac-comment-submit">
-              <i class="fas fa-paper-plane"></i>
-            </button>
-          </div>
-        </div>
-        
-        <div class="ursac-comments-list">
-          <div class="ursac-no-comments">
-            No comments yet. Be the first to comment!
-          </div>
-        </div>
-      </div>
-    </div>
-  </template>
-
-  <!-- Comment Template (Hidden) -->
-  <template id="comment-template">
-    <div class="ursac-comment-thread">
-      <div class="ursac-comment" data-comment-id="">
-        <div class="ursac-comment-avatar">
-          <span class="comment-avatar-initials"></span>
-        </div>
-        <div class="ursac-comment-content">
-          <div class="ursac-comment-bubble">
-            <div class="ursac-comment-header">
-              <span class="ursac-comment-username"></span>
-              <span class="ursac-comment-time"></span>
-            </div>
-            <div class="ursac-comment-text"></div>
-          </div>
-          <div class="ursac-comment-actions">
-            <button class="ursac-reply-button">
-              <i class="fas fa-reply"></i> Reply
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Reply Input Container -->
-      <div class="ursac-reply-input-container" style="display: none;">
-        <div class="ursac-comment-input-wrapper">
-          <div class="ursac-comment-avatar">
-            <span class="current-user-initials"></span>
-          </div>
-          <div class="ursac-comment-input-container">
-            <input type="text" class="ursac-reply-input" placeholder="Write a reply...">
-            <button class="ursac-reply-submit">
-              <i class="fas fa-paper-plane"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Replies Container -->
-      <div class="ursac-replies-container">
-        <!-- Replies will be inserted here -->
-      </div>
-
-      <!-- View More Replies Button -->
-      <div class="ursac-view-more-replies" style="display: none;">
-        <button class="ursac-view-more-btn">
-          <i class="fas fa-chevron-down"></i>
-          View <span class="remaining-count">0</span> more replies
-        </button>
-      </div>
-    </div>
-  </template>
-
-  <!-- Reply Template (Hidden) -->
-  <template id="reply-template">
-    <div class="ursac-reply" data-reply-id="">
-      <div class="ursac-reply-connector"></div>
-      <div class="ursac-comment-avatar">
-        <span class="reply-avatar-initials"></span>
-      </div>
-      <div class="ursac-comment-content">
-        <div class="ursac-comment-bubble">
-          <div class="ursac-comment-header">
-            <span class="ursac-comment-username"></span>
-            <span class="ursac-comment-time"></span>
-          </div>
-          <div class="ursac-comment-text"></div>
-        </div>
-      </div>
-    </div>
-  </template>
-
   <!-- Scripts -->
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-storage.js"></script>
   
-  <script>
-    // Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyAZ6EzZLpBIUlTjFm7ZUBfMMkmslIOeMFg",
-      authDomain: "social-media-8c5ba.firebaseapp.com",
-      databaseURL: "https://social-media-8c5ba-default-rtdb.firebaseio.com",
-      projectId: "social-media-8c5ba",
-      storageBucket: "social-media-8c5ba.appspot.com",
-      messagingSenderId: "25174929156",
-      appId: "1:25174929156:web:edd2093c4b96f710262a51",
-      measurementId: "G-SMRP4X0HPM"
-    };
-    
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-  </script>
-  
+  <!-- Load scripts in correct order -->
+  <script src="firebase-config.js"></script>
+  <script src="content-filter.js"></script>
+  <script src="ui-helpers.js"></script>
+  <script src="user-authentication.js"></script>
+  <script src="media-handler.js"></script>
+  <script src="post-manager.js"></script>
+  <script src="post-interactions.js"></script>
+  <script src="notification-system.js"></script>
+  <script src="main-app.js"></script>
   <script src="comments.js"></script>
-  <script src="script.js"></script>
-  <script src="notifications.js"></script>
-  <script src="messages.js"></script>
 </body>
 </html>

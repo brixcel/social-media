@@ -1,13 +1,76 @@
-// Comments and replies functionality - REFACTORED for seamless integration
+/**
+ * Comments and Replies System
+ * Handles comment functionality with proper user profile integration
+ */
+
 let currentUser = null
+let currentUserData = null
 let isSubmittingComment = false
 
-// Function to initialize comment system
+/**
+ * Initialize comment system with user data
+ * @param {Object} user - Firebase user object
+ */
 function initializeCommentSystem(user) {
   currentUser = user
   addCommentStyles()
   initializeCommentListeners()
+
+  // Load current user's profile data
+  loadCurrentUserData(user)
+
   console.log("Comment system initialized for user:", user.email)
+}
+
+/**
+ * Load current user's profile data
+ * @param {Object} user - Firebase user object
+ */
+function loadCurrentUserData(user) {
+  if (!user) return
+
+  window.firebaseDatabase
+    .ref("users/" + user.uid)
+    .once("value")
+    .then((snapshot) => {
+      currentUserData = snapshot.val()
+      console.log("Current user data loaded for comments:", currentUserData)
+
+      // Update all comment input avatars
+      updateCommentInputAvatars()
+    })
+    .catch((error) => {
+      console.error("Error loading current user data for comments:", error)
+    })
+}
+
+/**
+ * Update comment input avatars with current user data
+ */
+function updateCommentInputAvatars() {
+  const commentAvatars = document.querySelectorAll(
+    ".current-user-avatar, .ursac-comment-input-wrapper .ursac-comment-avatar",
+  )
+
+  commentAvatars.forEach((avatar) => {
+    updateAvatarElement(avatar)
+  })
+}
+
+/**
+ * Update avatar element with current user data
+ * @param {Element} avatarElement - Avatar DOM element
+ */
+function updateAvatarElement(avatarElement) {
+  if (!currentUserData || !avatarElement) return
+
+  const initials = window.getInitials(currentUserData.firstName, currentUserData.lastName)
+
+  if (currentUserData.profileImageUrl) {
+    avatarElement.innerHTML = `<img src="${currentUserData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+  } else {
+    avatarElement.innerHTML = `<span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #4a76a8; color: white; border-radius: 50%; font-weight: bold; font-size: 14px;">${initials}</span>`
+  }
 }
 
 // Function to load comments for a post
@@ -20,14 +83,13 @@ function loadComments(postId) {
 
   commentsList.innerHTML = '<div class="ursac-loading">Loading comments...</div>'
 
-  if (typeof firebase === "undefined" || !firebase.database) {
+  if (typeof window.firebaseDatabase === "undefined" || !window.firebaseDatabase.ref) {
     console.error("Firebase database not available")
     commentsList.innerHTML = '<div class="ursac-error">Firebase not available.</div>'
     return
   }
 
-  firebase
-    .database()
+  window.firebaseDatabase
     .ref(`posts/${postId}/comments`)
     .once("value")
     .then((snapshot) => {
@@ -39,7 +101,6 @@ function loadComments(postId) {
           .map(([id, comment]) => ({ id, ...comment }))
           .sort((a, b) => a.timestamp - b.timestamp)
 
-        // FIXED: Only show top-level comments and their direct replies (Facebook-style)
         const topLevelComments = commentsArray.filter((comment) => !comment.parentCommentId)
         const replies = commentsArray.filter((comment) => comment.parentCommentId)
 
@@ -70,7 +131,7 @@ function loadComments(postId) {
     })
 }
 
-// FIXED: Create comment element with vertical layout (Facebook-style)
+// Function to create comment element with vertical layout (Facebook-style)
 function createCommentElement(comment, postId, maxVisibleReplies = 3) {
   const wrapper = document.createElement("div")
   wrapper.className = "ursac-comment-thread"
@@ -80,16 +141,19 @@ function createCommentElement(comment, postId, maxVisibleReplies = 3) {
   commentElement.className = "ursac-comment"
   commentElement.setAttribute("data-comment-id", comment.id)
 
+  const userInitials = window.getInitials(comment.userFirstName || "", comment.userLastName || "")
+  const userName = `${comment.userFirstName || ""} ${comment.userLastName || ""}`.trim() || "Unknown User"
+
   const commentHTML = `
     <div class="ursac-comment-avatar">
-      <span>${getInitials(comment.userFirstName || "", comment.userLastName || "")}</span>
+      <span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #4a76a8; color: white; border-radius: 50%; font-weight: bold; font-size: 14px;">${userInitials}</span>
     </div>
     <div class="ursac-comment-content">
-      <div class="ursac-comment-author">${comment.userFirstName || ""} ${comment.userLastName || ""}</div>
+      <div class="ursac-comment-author">${userName}</div>
       <div class="ursac-comment-text">${comment.text}</div>
-      <div class="ursac-comment-time">${formatTimeAgo(new Date(comment.timestamp))}</div>
+      <div class="ursac-comment-time">${window.formatTimeAgo(new Date(comment.timestamp))}</div>
       <div class="ursac-comment-actions">
-        <button class="ursac-reply-button" onclick="commentSystem.showReplyInput('${postId}', '${comment.id}')">
+        <button class="ursac-reply-button" onclick="window.commentSystem.showReplyInput('${postId}', '${comment.id}')">
           <i class="fas fa-reply"></i> Reply
         </button>
       </div>
@@ -102,7 +166,7 @@ function createCommentElement(comment, postId, maxVisibleReplies = 3) {
   // Add reply input container
   wrapper.appendChild(createReplyInputContainer(postId, comment.id))
 
-  // FIXED: Handle replies in vertical layout (only direct replies, no nesting)
+  // Handle replies in vertical layout (only direct replies, no nesting)
   if (comment.replies && comment.replies.length > 0) {
     const repliesContainer = document.createElement("div")
     repliesContainer.className = "ursac-reply-container"
@@ -130,21 +194,24 @@ function createCommentElement(comment, postId, maxVisibleReplies = 3) {
   return wrapper
 }
 
-// FIXED: Create reply element (NO NESTED REPLIES - only direct replies to main comments)
+// Function to create reply element (NO NESTED REPLIES - only direct replies to main comments)
 function createReplyElement(reply, postId) {
   const replyElement = document.createElement("div")
   replyElement.className = "ursac-comment ursac-reply"
   replyElement.setAttribute("data-comment-id", reply.id)
   replyElement.setAttribute("data-user-id", reply.userId)
 
+  const userInitials = window.getInitials(reply.userFirstName || "", reply.userLastName || "")
+  const userName = `${reply.userFirstName || ""} ${reply.userLastName || ""}`.trim() || "Unknown User"
+
   const replyHTML = `
     <div class="ursac-comment-avatar">
-      <span>${getInitials(reply.userFirstName || "", reply.userLastName || "")}</span>
+      <span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #4a76a8; color: white; border-radius: 50%; font-weight: bold; font-size: 14px;">${userInitials}</span>
     </div>
     <div class="ursac-comment-content">
-      <div class="ursac-comment-author">${reply.userFirstName || ""} ${reply.userLastName || ""}</div>
+      <div class="ursac-comment-author">${userName}</div>
       <div class="ursac-comment-text">${reply.text}</div>
-      <div class="ursac-comment-time">${formatTimeAgo(new Date(reply.timestamp))}</div>
+      <div class="ursac-comment-time">${window.formatTimeAgo(new Date(reply.timestamp))}</div>
     </div>
   `
 
@@ -157,19 +224,28 @@ function createReplyInputContainer(postId, commentId) {
   container.className = "ursac-reply-input-container"
   container.style.display = "none"
   container.setAttribute("data-for-comment", commentId)
+
+  const currentUserInitials = currentUserData
+    ? window.getInitials(currentUserData.firstName, currentUserData.lastName)
+    : window.getInitials("", "")
+
   container.innerHTML = `
-    <div class="ursac-comment-input-wrapper">
-      <div class="ursac-comment-avatar">
-        <span>${getInitials(currentUser?.firstName || "", currentUser?.lastName || "")}</span>
-      </div>
-      <div class="ursac-comment-input-container">
-        <input type="text" class="ursac-reply-input" placeholder="Write a reply...">
-        <button class="ursac-reply-submit" onclick="commentSystem.submitReply('${postId}', '${commentId}')" disabled>
-          <i class="fas fa-paper-plane"></i>
-        </button>
-      </div>
+  <div class="ursac-comment-input-wrapper">
+    <div class="ursac-comment-avatar current-user-avatar">
+      ${
+        currentUserData?.profileImageUrl
+          ? `<img src="${currentUserData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+          : `<span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #4a76a8; color: white; border-radius: 50%; font-weight: bold; font-size: 14px;">${currentUserInitials}</span>`
+      }
     </div>
-  `
+    <div class="ursac-comment-input-container">
+      <input type="text" class="ursac-reply-input" placeholder="Write a reply...">
+      <button class="ursac-reply-submit" onclick="window.commentSystem.submitReply('${postId}', '${commentId}')" disabled>
+        <i class="fas fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
+`
   return container
 }
 
@@ -201,14 +277,13 @@ function createViewMoreButton(hiddenReplies, postId) {
   return { button, container }
 }
 
-// FIXED: Enhanced CSS for vertical Facebook-like layout
+// Enhanced CSS for vertical Facebook-like layout
 function addCommentStyles() {
   if (document.getElementById("ursac-comment-styles")) return
 
   const style = document.createElement("style")
   style.id = "ursac-comment-styles"
   style.textContent = `
-    /* FIXED: Vertical comment layout similar to Facebook */
     .ursac-comments-list {
       margin-top: 15px;
       display: flex;
@@ -246,6 +321,7 @@ function addCommentStyles() {
       font-weight: bold;
       flex-shrink: 0;
       font-size: 14px;
+      overflow: hidden;
     }
 
     .ursac-comment-content {
@@ -295,7 +371,6 @@ function addCommentStyles() {
       text-decoration: underline;
     }
 
-    /* FIXED: Reply container with proper indentation */
     .ursac-reply-container {
       margin-left: 42px;
       position: relative;
@@ -312,7 +387,6 @@ function addCommentStyles() {
       margin-bottom: 6px;
     }
 
-    /* Reply input styles */
     .ursac-reply-input-container {
       margin-left: 42px;
       margin-top: 8px;
@@ -380,7 +454,6 @@ function addCommentStyles() {
       cursor: not-allowed;
     }
 
-    /* View more button styles */
     .ursac-view-more-replies {
       background: none;
       border: none;
@@ -400,7 +473,6 @@ function addCommentStyles() {
       text-decoration: underline;
     }
 
-    /* Hidden replies container */
     .ursac-hidden-replies {
       margin-top: 8px;
       display: flex;
@@ -409,7 +481,6 @@ function addCommentStyles() {
       transition: all 0.3s ease-in-out;
     }
 
-    /* Loading and error states */
     .ursac-loading,
     .ursac-error,
     .ursac-no-comments {
@@ -423,7 +494,6 @@ function addCommentStyles() {
       color: #dc3545;
     }
 
-    /* Scrollbar styling for comments list */
     .ursac-comments-list::-webkit-scrollbar {
       width: 6px;
     }
@@ -445,7 +515,7 @@ function addCommentStyles() {
   document.head.appendChild(style)
 }
 
-// FIXED: Initialize comment listeners with duplicate prevention
+// Initialize comment listeners with duplicate prevention
 function initializeCommentListeners() {
   document.addEventListener("input", (e) => {
     if (e.target.matches(".ursac-comment-input, .ursac-reply-input")) {
@@ -475,16 +545,14 @@ function initializeCommentListeners() {
   })
 }
 
-// FIXED: Submit comment function with duplicate prevention
+// Submit comment function with duplicate prevention
 function submitComment(postId) {
   if (!currentUser) {
-    if (typeof showModal === "function") {
-      showModal("Authentication Required", "You must be logged in to comment.")
-    }
+    window.showModal("Authentication Required", "You must be logged in to comment.")
     return
   }
 
-  // FIXED: Prevent duplicate submissions
+  // Prevent duplicate submissions
   if (isSubmittingComment) {
     return
   }
@@ -499,14 +567,10 @@ function submitComment(postId) {
   if (!commentText) return
 
   // Check for profanity
-  if (typeof checkForProfanity === "function") {
-    const profanityResult = checkForProfanity(commentText)
-    if (profanityResult?.isProfane) {
-      if (typeof showProfanityWarning === "function") {
-        showProfanityWarning(profanityResult.matches)
-      }
-      return
-    }
+  const profanityResult = window.checkForProfanity(commentText)
+  if (profanityResult?.isProfane) {
+    window.showProfanityWarning(profanityResult.matches)
+    return
   }
 
   isSubmittingComment = true
@@ -515,186 +579,90 @@ function submitComment(postId) {
   const submitButton = commentInput.nextElementSibling
   if (submitButton) submitButton.disabled = true
 
-  if (typeof commentPost === "function") {
-    commentPost(postId, commentText)
+  window
+    .commentPost(postId, commentText)
+    .then(() => {
+      commentInput.value = ""
+      loadComments(postId)
+    })
+    .catch((error) => {
+      console.error("Error posting comment:", error)
+      window.showModal("Comment Failed", "Failed to post comment. Please try again.")
+    })
+    .finally(() => {
+      commentInput.disabled = false
+      if (submitButton) submitButton.disabled = true
+      isSubmittingComment = false
+    })
+}
+
+// Export the comment system functions
+window.commentSystem = {
+  initialize: initializeCommentSystem,
+  loadComments,
+  updateAllAvatars: updateCommentInputAvatars,
+  showReplyInput: (postId, commentId) => {
+    document.querySelectorAll(".ursac-reply-input-container").forEach((container) => {
+      container.style.display = "none"
+    })
+
+    const replyContainer = document.querySelector(`.ursac-reply-input-container[data-for-comment="${commentId}"]`)
+    if (replyContainer) {
+      replyContainer.style.display = "block"
+      const input = replyContainer.querySelector(".ursac-reply-input")
+      if (input) input.focus()
+    }
+  },
+  submitReply: (postId, commentId) => {
+    if (!currentUser) {
+      window.showModal("Authentication Required", "You must be logged in to reply.")
+      return
+    }
+
+    // Prevent duplicate submissions
+    if (isSubmittingComment) {
+      return
+    }
+
+    const replyContainer = document.querySelector(`.ursac-reply-input-container[data-for-comment="${commentId}"]`)
+    if (!replyContainer) return
+
+    const input = replyContainer.querySelector(".ursac-reply-input")
+    if (!input) return
+
+    const replyText = input.value.trim()
+    if (!replyText) return
+
+    const profanityResult = window.checkForProfanity(replyText)
+    if (profanityResult?.isProfane) {
+      window.showProfanityWarning(profanityResult.matches)
+      return
+    }
+
+    isSubmittingComment = true
+
+    input.disabled = true
+    const submitBtn = replyContainer.querySelector(".ursac-reply-submit")
+    if (submitBtn) submitBtn.disabled = true
+
+    window
+      .replyToComment(postId, commentId, replyText)
       .then(() => {
-        commentInput.value = ""
+        input.value = ""
+        replyContainer.style.display = "none"
         loadComments(postId)
       })
       .catch((error) => {
-        console.error("Error posting comment:", error)
-        if (typeof showModal === "function") {
-          showModal("Comment Failed", "Failed to post comment. Please try again.")
-        }
+        console.error("Error posting reply:", error)
+        window.showModal("Reply Failed", "Failed to post reply. Please try again.")
       })
       .finally(() => {
-        commentInput.disabled = false
-        if (submitButton) submitButton.disabled = true
-        isSubmittingComment = false
-      })
-  } else {
-    console.warn("commentPost function not available")
-    commentInput.disabled = false
-    if (submitButton) submitButton.disabled = true
-    isSubmittingComment = false
-  }
-}
-
-// FIXED: Export the comment system functions
-if (!window.commentSystem) {
-  window.commentSystem = {
-    initialize: initializeCommentSystem,
-    loadComments,
-    showReplyInput: (postId, commentId) => {
-      document.querySelectorAll(".ursac-reply-input-container").forEach((container) => {
-        container.style.display = "none"
-      })
-
-      const replyContainer = document.querySelector(`.ursac-reply-input-container[data-for-comment="${commentId}"]`)
-      if (replyContainer) {
-        replyContainer.style.display = "block"
-        const input = replyContainer.querySelector(".ursac-reply-input")
-        if (input) input.focus()
-      }
-    },
-    submitReply: (postId, commentId) => {
-      if (!currentUser) {
-        if (typeof showModal === "function") {
-          showModal("Authentication Required", "You must be logged in to reply.")
-        }
-        return
-      }
-
-      // FIXED: Prevent duplicate submissions
-      if (isSubmittingComment) {
-        return
-      }
-
-      const replyContainer = document.querySelector(`.ursac-reply-input-container[data-for-comment="${commentId}"]`)
-      if (!replyContainer) return
-
-      const input = replyContainer.querySelector(".ursac-reply-input")
-      if (!input) return
-
-      const replyText = input.value.trim()
-      if (!replyText) return
-
-      if (typeof checkForProfanity === "function") {
-        const profanityResult = checkForProfanity(replyText)
-        if (profanityResult?.isProfane) {
-          if (typeof showProfanityWarning === "function") {
-            showProfanityWarning(profanityResult.matches)
-          }
-          return
-        }
-      }
-
-      isSubmittingComment = true
-
-      input.disabled = true
-      const submitBtn = replyContainer.querySelector(".ursac-reply-submit")
-      if (submitBtn) submitBtn.disabled = true
-
-      if (typeof replyToComment === "function") {
-        replyToComment(postId, commentId, replyText)
-          .then(() => {
-            input.value = ""
-            replyContainer.style.display = "none"
-            loadComments(postId)
-          })
-          .catch((error) => {
-            console.error("Error posting reply:", error)
-            if (typeof showModal === "function") {
-              showModal("Reply Failed", "Failed to post reply. Please try again.")
-            }
-          })
-          .finally(() => {
-            input.disabled = false
-            if (submitBtn) submitBtn.disabled = true
-            isSubmittingComment = false
-          })
-      } else {
-        console.warn("replyToComment function not available")
         input.disabled = false
         if (submitBtn) submitBtn.disabled = true
         isSubmittingComment = false
-      }
-    },
-    submitComment: submitComment,
-  }
+      })
+  },
+  submitComment: submitComment,
 }
 
-// Helper functions - only define if they don't exist
-if (typeof getInitials !== "function") {
-  function getInitials(firstName, lastName) {
-    return (firstName ? firstName[0].toUpperCase() : "") + (lastName ? lastName[0].toUpperCase() : "")
-  }
-}
-
-if (typeof formatTimeAgo !== "function") {
-  function formatTimeAgo(date) {
-    const seconds = Math.floor((new Date() - date) / 1000)
-    let interval = seconds / 31536000
-
-    if (interval > 1) {
-      return Math.floor(interval) + " years ago"
-    }
-    interval = seconds / 2592000
-    if (interval > 1) {
-      return Math.floor(interval) + " months ago"
-    }
-    interval = seconds / 86400
-    if (interval > 1) {
-      return Math.floor(interval) + " days ago"
-    }
-    interval = seconds / 3600
-    if (interval > 1) {
-      return Math.floor(interval) + " hours ago"
-    }
-    interval = seconds / 60
-    if (interval > 1) {
-      return Math.floor(interval) + " minutes ago"
-    }
-    return Math.floor(seconds) + " seconds ago"
-  }
-}
-
-// Mock functions if they don't exist
-if (typeof showModal !== "function") {
-  function showModal(title, message) {
-    console.warn(`Modal: ${title} - ${message}`)
-    alert(`${title}: ${message}`)
-  }
-}
-
-if (typeof checkForProfanity !== "function") {
-  function checkForProfanity(text) {
-    return { isProfane: false, matches: [] }
-  }
-}
-
-if (typeof showProfanityWarning !== "function") {
-  function showProfanityWarning(matches) {
-    console.warn("Profanity warning:", matches)
-  }
-}
-
-if (typeof commentPost !== "function") {
-  function commentPost(postId, commentText) {
-    return new Promise((resolve) => {
-      console.log(`Comment posted to post ${postId} with text: ${commentText}`)
-      setTimeout(resolve, 500)
-    })
-  }
-}
-
-if (typeof replyToComment !== "function") {
-  function replyToComment(postId, commentId, replyText) {
-    return new Promise((resolve) => {
-      console.log(`Reply posted to comment ${commentId} on post ${postId} with text: ${replyText}`)
-      setTimeout(resolve, 500)
-    })
-  }
-}
-
-console.log("Comments system loaded successfully")
+console.log("Enhanced comments system loaded successfully")
