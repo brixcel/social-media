@@ -1038,8 +1038,7 @@ img, video {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    max-width: 50%;
-    margin: 0 auto;
+    margin-left: 20%; 
     transition: max-width 0.3s ease, margin 0.3s ease;
 }
 
@@ -1312,7 +1311,7 @@ img, video {
     display: flex;
     align-items: center;
     margin-bottom: var(--spacing-sm);
-    justify-content: space-between;
+    justify-content: start;
 }
 
 .ursac-post-user {
@@ -1360,8 +1359,8 @@ img, video {
 }
 
 .ursac-post-meta {
-    color: var(--dark-gray);
-    font-size: var(--font-size-xs);
+    color: var(--blue-dark);
+    font-size: var(--font-size-sm);
 }
 
 .ursac-post-options {

@@ -14,7 +14,7 @@ use App\Http\Controllers\ProfileController; // Add this line
 // Auth routes
 Route::get('/register', [FirebaseAuthController::class, 'registerForm']);
 Route::get('/admin-register', [FirebaseAuthController::class, 'AdminRegistration']);
-Route::get('/login', [FirebaseAuthController::class, 'loginForm'])->name('login');
+Route::get('/', [FirebaseAuthController::class, 'loginForm'])->name('login');
 Route::post('/login', [FirebaseAuthController::class, 'login'])->name('login.process');
 Route::get('/homepage', [FirebaseAuthController::class, 'homepage'])->name('homepage');
 Route::post('/logout', [FirebaseAuthController::class, 'logout'])->name('logout');
@@ -48,11 +48,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/users/{id}/unban', [UserController::class, 'unbanUser'])->name('users.unban');
     Route::delete('/users/{id}', [UserController::class, 'deleteUser'])->name('users.delete');
 });
-// Public routes
-Route::get('/', function() {
-    return view('welcome');
-});
-
 
 
 // Add this route for handling post creation from homepage

@@ -70,11 +70,10 @@
     }
 
     .ursac-profile-edit-btn {
-      background-color: #4a76a8;
+      background-color:#1267dd;
       color: white;
       border: none;
       padding: 8px 16px;
-      border-radius: 4px;
       cursor: pointer;
       font-weight: 500;
     }
@@ -152,8 +151,8 @@
     }
 
     .ursac-profile-tab.active {
-      border-bottom-color: #4a76a8;
-      color: #4a76a8;
+      border-bottom-color:rgb(255, 255, 255);
+      color:rgb(255, 255, 255);
     }
 
     .ursac-profile-section {
@@ -230,6 +229,7 @@
       font-size: 18px;
       font-weight: 600;
       margin-bottom: 15px;
+      color : white
     }
 
     .ursac-no-posts {
@@ -395,42 +395,7 @@
       </div>
     </div>
     
-    <!-- Right Sidebar -->
-    <div class="ursac-sidebar-right">
-      <!-- Forums Section -->
-      <div class="ursac-sidebar-section">
-        <h3 class="ursac-sidebar-title">Forums</h3>
-        <div class="ursac-forum-list">
-          <div class="ursac-forum-item">
-            <div class="ursac-forum-icon">
-              <i class="fas fa-graduation-cap"></i>
-            </div>
-            <div class="ursac-forum-info">
-              <div class="ursac-forum-name">Academic Discussions</div>
-              <div class="ursac-forum-count">24 new posts</div>
-            </div>
-          </div>
-          <div class="ursac-forum-item">
-            <div class="ursac-forum-icon">
-              <i class="fas fa-laptop-code"></i>
-            </div>
-            <div class="ursac-forum-info">
-              <div class="ursac-forum-name">Tech Corner</div>
-              <div class="ursac-forum-count">12 new posts</div>
-            </div>
-          </div>
-          <div class="ursac-forum-item">
-            <div class="ursac-forum-icon">
-              <i class="fas fa-bullhorn"></i>
-            </div>
-            <div class="ursac-forum-info">
-              <div class="ursac-forum-name">Announcements</div>
-              <div class="ursac-forum-count">5 new posts</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+ 
   </div>
 
   <!-- Post Modal -->
