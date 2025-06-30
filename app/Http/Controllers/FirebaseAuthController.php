@@ -35,6 +35,10 @@ class FirebaseAuthController extends Controller
     {
         return view('Auth.homepage');
     }
+    public function AdminRegistration()
+    {
+        return view('Auth.AdminRegistration');
+    }
     public function register(Request $request)
 {
     $request->validate([
@@ -100,6 +104,32 @@ protected function saveUserData($uid, $data)
     $usersRef->getChild($uid)->set($data);
 }
 
+public function notifications()
+{
+    // Just return the notifications Blade view.
+    return view('Auth.notifications');
+}
+public function messages()
+{
+    // Just return the messages Blade view.
+    return view('Auth.messages'); // Corrected the view name here
+}
+
+public function join()
+{
+    return view('Auth.join'); // Blade file: resources/views/forums/join.blade.php
+}
+
+public function create()
+{
+    return view('Auth.create'); // Blade file: resources/views/forums/join.blade.php
+}
+
+public function view()
+{
+    return view('Auth.view'); // Blade file: resources/views/forums/join.blade.php
+}
+
 
 
 
@@ -160,5 +190,7 @@ protected function saveUserData($uid, $data)
             return null;
         }
     }
-}
 
+
+
+}

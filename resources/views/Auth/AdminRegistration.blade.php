@@ -54,13 +54,14 @@
     }
     
     .logo {
-      color: white;
-      font-size: 40px;
-      font-weight: 800;
-      margin-bottom: 20px;
       position: absolute;
-      top: 20px;
+      top: 30px;
       left: 40px;
+      font-size: 2rem;
+      font-weight: 800;
+      color: #fff;
+      font-style: italic;
+      z-index: 10;
     }
     
     .form-card {
@@ -181,8 +182,9 @@
   </style>
 </head>
 <body>
+<div class="logo">URSAC Hub</div>
   <div class="container">
-    <div class="logo">URSAC Hub</div>
+    
     <div class="form-card">
       <h2>Register now!</h2>
       
