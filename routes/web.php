@@ -10,7 +10,7 @@ use App\Http\Controllers\Admin\PageController;
 // Auth routes
 Route::get('/register', [FirebaseAuthController::class, 'registerForm']);
 Route::get('/admin-register', [FirebaseAuthController::class, 'AdminRegistration']);
-Route::get('/login', [FirebaseAuthController::class, 'loginForm'])->name('login');
+Route::get('/', [FirebaseAuthController::class, 'loginForm'])->name('login');
 Route::post('/login', [FirebaseAuthController::class, 'login'])->name('login.process');
 Route::get('/homepage', [FirebaseAuthController::class, 'homepage']);
 Route::post('/logout', [FirebaseAuthController::class, 'logout'])->name('logout');
@@ -35,6 +35,3 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::delete('/posts/{id}', [PostController::class, 'destroy'])->name('posts.destroy');
 });
 // Public routes
-Route::get('/', function() {
-    return view('welcome');
-});
