@@ -4,6 +4,49 @@ document.addEventListener("DOMContentLoaded", () => {
   const database = firebase.database()
   const storage = firebase.storage()
 
+  // Fallback user data fetching function if the global one isn't available
+  async function fetchUserDataFallback(userId, maxRetries = 3) {
+    if (!userId) {
+      throw new Error("User ID is required")
+    }
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const snapshot = await database.ref(`users/${userId}`).once("value")
+
+        if (snapshot.exists()) {
+          return snapshot.val()
+        } else {
+          return null
+        }
+      } catch (error) {
+        console.error(`Attempt ${attempt} failed for userId ${userId}:`, error)
+
+        if (attempt === maxRetries) {
+          throw error
+        }
+
+        // Wait before retrying
+        const delay = Math.pow(2, attempt) * 1000
+        await new Promise((resolve) => setTimeout(resolve, delay))
+      }
+    }
+  }
+
+  // Helper function to get initials if global function isn't available
+  function getInitialsFallback(firstName, lastName) {
+    if (!firstName && !lastName) return "?"
+
+    let initials = ""
+    if (firstName) initials += firstName.charAt(0).toUpperCase()
+    if (lastName) initials += lastName.charAt(0).toUpperCase()
+    return initials || "?"
+  }
+
+  // Profile management variables (same as comments.js)
+  let currentUser = null
+  let currentUserData = null
+
   // Enhanced message status tracking
   const MESSAGE_STATUS = {
     SENDING: "sending",
@@ -25,6 +68,77 @@ document.addEventListener("DOMContentLoaded", () => {
   // ✅ CORE: Shared Chat ID function (like Messenger)
   function getChatId(uid1, uid2) {
     return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`
+  }
+
+  /**
+   * Load current user's profile data with retry logic (same as comments.js)
+   * @param {Object} user - Firebase user object
+   */
+  async function loadCurrentUserData(user) {
+    if (!user) return
+
+    try {
+      // Use global function if available, otherwise use fallback
+      const fetchFunction = window.fetchUserDataWithRetry || fetchUserDataFallback
+      const userData = await fetchFunction(user.uid)
+
+      if (userData) {
+        currentUserData = userData
+        console.log("Current user data loaded for messages:", currentUserData)
+        updateMessageAvatars()
+      } else {
+        console.warn("Could not load full user data, using fallback")
+        currentUserData = {
+          firstName: user.displayName?.split(" ")[0] || "User",
+          lastName: user.displayName?.split(" ")[1] || "",
+          profileImageUrl: user.photoURL || null,
+        }
+        updateMessageAvatars()
+      }
+    } catch (error) {
+      console.error("Error loading current user data for messages:", error)
+      currentUserData = {
+        firstName: "User",
+        lastName: "",
+        profileImageUrl: null,
+      }
+      updateMessageAvatars()
+    }
+  }
+
+  /**
+   * Update message avatars with current user data (same pattern as comments.js)
+   */
+  function updateMessageAvatars() {
+    const currentUserAvatars = document.querySelectorAll(".current-user-avatar")
+
+    currentUserAvatars.forEach((avatar) => {
+      updateAvatarElement(avatar)
+    })
+  }
+
+  /**
+   * Update avatar element with current user data (same as comments.js)
+   * @param {Element} avatarElement - Avatar DOM element
+   */
+  function updateAvatarElement(avatarElement) {
+    if (!avatarElement) return
+
+    const userData = currentUserData || {
+      firstName: "User",
+      lastName: "",
+      profileImageUrl: null,
+    }
+
+    // Use global function if available, otherwise use fallback
+    const getInitialsFunction = window.getInitials || getInitialsFallback
+    const initials = getInitialsFunction(userData.firstName, userData.lastName)
+
+    if (userData.profileImageUrl) {
+      avatarElement.innerHTML = `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+    } else {
+      avatarElement.innerHTML = `<span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #4a76a8; color: white; border-radius: 50%; font-weight: bold; font-size: 14px;">${initials}</span>`
+    }
   }
 
   // Profanity Filter - List of prohibited words (Filipino and English)
@@ -182,7 +296,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const uploadStatus = document.getElementById("upload-status")
 
   // ✅ FIXED: Variables using new structure
-  let currentUser = null
   let currentChatId = null // Use chatId instead of conversationId
   let selectedRecipientId = null
   let conversations = []
@@ -289,6 +402,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (user) {
         currentUser = user
         console.log("Authenticated as:", user.email)
+
+        // Load current user's profile data (same as comments.js)
+        loadCurrentUserData(user)
+
         setupUserPresence(user)
         initializeProfileElements()
         loadUserProfile(user)
@@ -354,37 +471,68 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Load user profile
+  // Load user profile with enhanced integration
   function loadUserProfile(user) {
     if (!user) return
 
-    database
-      .ref("users/" + user.uid)
-      .once("value")
-      .then((snapshot) => {
-        const userData = snapshot.val()
-
+    // Use enhanced user data loading method
+    loadCurrentUserData(user)
+      .then(() => {
         const userProfileBtn = document.getElementById("user-profile-btn")
-        if (userData && userProfileBtn) {
-          const initials = getInitials(userData.firstName, userData.lastName)
-          const fullName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+        if (currentUserData && userProfileBtn) {
+          const initials = getInitials(currentUserData.firstName, currentUserData.lastName)
+          const fullName = `${currentUserData.firstName || ""} ${currentUserData.lastName || ""}`.trim()
 
           userProfileBtn.innerHTML = `
-            <div class="ursac-profile-avatar">
-              <span>${initials}</span>
-            </div>
-            <div class="ursac-profile-info">
-              <div class="ursac-profile-name">${fullName}</div>
-              <div class="ursac-profile-email">${user.email}</div>
-            </div>
-            <i class="fas fa-chevron-down"></i>
-          `
+          <div class="ursac-profile-avatar current-user-avatar">
+            ${
+              currentUserData.profileImageUrl
+                ? `<img src="${currentUserData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+                : `<span>${initials}</span>`
+            }
+          </div>
+          <div class="ursac-profile-info">
+            <div class="ursac-profile-name">${fullName}</div>
+            <div class="ursac-profile-email">${user.email}</div>
+          </div>
+          <i class="fas fa-chevron-down"></i>
+        `
 
           userProfileBtn.style.cursor = "pointer"
         }
       })
       .catch((error) => {
         console.error("Error loading user profile:", error)
+
+        // Fallback to basic Firebase user data
+        database
+          .ref("users/" + user.uid)
+          .once("value")
+          .then((snapshot) => {
+            const userData = snapshot.val()
+
+            const userProfileBtn = document.getElementById("user-profile-btn")
+            if (userData && userProfileBtn) {
+              const initials = getInitials(userData.firstName, userData.lastName)
+              const fullName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+
+              userProfileBtn.innerHTML = `
+              <div class="ursac-profile-avatar">
+                <span>${initials}</span>
+              </div>
+              <div class="ursac-profile-info">
+                <div class="ursac-profile-name">${fullName}</div>
+                <div class="ursac-profile-email">${user.email}</div>
+              </div>
+              <i class="fas fa-chevron-down"></i>
+            `
+
+              userProfileBtn.style.cursor = "pointer"
+            }
+          })
+          .catch((error) => {
+            console.error("Error loading user profile:", error)
+          })
       })
   }
 
@@ -457,7 +605,7 @@ document.addEventListener("DOMContentLoaded", () => {
     )
   }
 
-  // Render conversations list
+  // Render conversations list with enhanced user data fetching
   function renderConversations() {
     loadingConversations.style.display = "none"
 
@@ -499,7 +647,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       renderedConversations.add(conversation.id)
 
-      getUserData(conversation.otherUserId)
+      // Use enhanced user data fetching
+      getUserDataEnhanced(conversation.otherUserId)
         .then((userData) => {
           // ✅ Check again if this conversation item already exists in DOM
           const existingItem = conversationsList.querySelector(`[data-conversation-id="${conversation.id}"]`)
@@ -536,7 +685,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
           conversationItem.innerHTML = `
           <div class="ursac-conversation-avatar">
-            <span>${userInitials}</span>
+            ${
+              userData.profileImageUrl
+                ? `<img src="${userData.profileImageUrl}" alt="${userName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+                : `<span>${userInitials}</span>`
+            }
           </div>
           <div class="ursac-conversation-info">
             <div class="ursac-conversation-name">${userName}</div>
@@ -580,8 +733,8 @@ document.addEventListener("DOMContentLoaded", () => {
     messagesArea.style.display = "block"
     messageInputArea.style.display = "flex"
 
-    // Load user data
-    getUserData(userId)
+    // Load user data with enhanced method
+    getUserDataEnhanced(userId)
       .then((userData) => {
         const userInitials = getInitials(userData.firstName, userData.lastName)
         const userName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
@@ -932,7 +1085,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function createMessageNotification(recipientId, messageText, chatId, messageId) {
     if (!recipientId || !currentUser) return
 
-    getUserData(currentUser.uid)
+    getUserDataEnhanced(currentUser.uid)
       .then((userData) => {
         const senderName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
 
@@ -1250,7 +1403,7 @@ document.addEventListener("DOMContentLoaded", () => {
     })
   }
 
-  // Load users for new conversation modal
+  // Load users for new conversation modal with enhanced data fetching
   function loadUsers() {
     database
       .ref("users")
@@ -1289,7 +1442,7 @@ document.addEventListener("DOMContentLoaded", () => {
       })
   }
 
-  // Render recipients list
+  // Render recipients list with enhanced profile display
   function renderRecipientsList(usersList) {
     if (usersList.length === 0) {
       recipientsList.innerHTML = `
@@ -1309,7 +1462,11 @@ document.addEventListener("DOMContentLoaded", () => {
       html += `
         <div class="ursac-recipient-item" data-user-id="${user.id}">
           <div class="ursac-recipient-avatar">
-            <span>${userInitials}</span>
+            ${
+              user.profileImageUrl
+                ? `<img src="${user.profileImageUrl}" alt="${userName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+                : `<span>${userInitials}</span>`
+            }
           </div>
           <div class="ursac-recipient-info">
             <div class="ursac-recipient-name">${userName}</div>
@@ -1386,7 +1543,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const filteredConversations = conversations.filter((conversation) => {
           const otherUserId = conversation.otherUserId
 
-          return getUserData(otherUserId).then((userData) => {
+          return getUserDataEnhanced(otherUserId).then((userData) => {
             const userName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim().toLowerCase()
             return userName.includes(searchTerm)
           })
@@ -1578,7 +1735,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ✅ FIXED: Render message using sender field
+  // ✅ FIXED: Render message using sender field with enhanced user data
   function renderMessage(message) {
     const isSent = message.sender === currentUser.uid
     const messageEl = document.createElement("div")
@@ -1586,12 +1743,16 @@ document.addEventListener("DOMContentLoaded", () => {
     messageEl.setAttribute("data-message-id", message.id) // ✅ Important for duplicate checking
 
     if (!isSent) {
-      getUserData(message.sender)
+      getUserDataEnhanced(message.sender)
         .then((userData) => {
           const userInitials = getInitials(userData.firstName, userData.lastName)
-          const avatarEl = messageEl.querySelector(".ursac-message-avatar span")
+          const avatarEl = messageEl.querySelector(".ursac-message-avatar")
           if (avatarEl) {
-            avatarEl.textContent = userInitials
+            if (userData.profileImageUrl) {
+              avatarEl.innerHTML = `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+            } else {
+              avatarEl.innerHTML = `<span>${userInitials}</span>`
+            }
           }
         })
         .catch((error) => {
@@ -1600,7 +1761,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     let messageContent = `
-    ${!isSent ? `<div class="ursac-message-avatar"><span>JS</span></div>` : ""}
+    ${!isSent ? `<div class="ursac-message-avatar"><span>U</span></div>` : ""}
     <div class="ursac-message-content">
       <div class="ursac-message-bubble">
         ${message.text || ""}
@@ -1614,7 +1775,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (message.mediaType === "image" || fileExtension === "gif") {
         messageContent = `
-        ${!isSent ? `<div class="ursac-message-avatar"><span>JS</span></div>` : ""}
+        ${!isSent ? `<div class="ursac-message-avatar"><span>U</span></div>` : ""}
         <div class="ursac-message-content">
           <div class="ursac-message-bubble">
             ${message.text ? `${message.text}<br><br>` : ""}
@@ -1625,7 +1786,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `
       } else if (message.mediaType === "video") {
         messageContent = `
-        ${!isSent ? `<div class="ursac-message-avatar"><span>JS</span></div>` : ""}
+        ${!isSent ? `<div class="ursac-message-avatar"><span>U</span></div>` : ""}
         <div class="ursac-message-content">
           <div class="ursac-message-bubble">
             ${message.text ? `${message.text}<br><br>` : ""}
@@ -1639,7 +1800,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `
       } else if (message.mediaType === "file") {
         messageContent = `
-        ${!isSent ? `<div class="ursac-message-avatar"><span>JS</span></div>` : ""}
+        ${!isSent ? `<div class="ursac-message-avatar"><span>U</span></div>` : ""}
         <div class="ursac-message-content">
           <div class="ursac-message-bubble">
             ${message.text ? `${message.text}<br><br>` : ""}
@@ -1661,37 +1822,63 @@ document.addEventListener("DOMContentLoaded", () => {
     return messageEl
   }
 
-  // Helper function to get user data
-  function getUserData(userId) {
-    return new Promise((resolve, reject) => {
+  // Enhanced user data fetching (same as comments.js)
+  function getUserDataEnhanced(userId) {
+    return new Promise(async (resolve, reject) => {
       if (!userId) {
         resolve({
           firstName: "Unknown",
           lastName: "User",
+          profileImageUrl: null,
         })
         return
       }
 
-      database
-        .ref(`users/${userId}`)
-        .once("value", (snapshot) => {
-          if (snapshot.exists()) {
-            resolve(snapshot.val())
-          } else {
-            resolve({
-              firstName: "Unknown",
-              lastName: "User",
+      try {
+        // Use global function if available, otherwise use fallback
+        const fetchFunction = window.fetchUserDataWithRetry || fetchUserDataFallback
+        const userData = await fetchFunction(userId)
+
+        if (userData) {
+          resolve(userData)
+        } else {
+          // Fallback to direct Firebase fetch
+          database
+            .ref(`users/${userId}`)
+            .once("value", (snapshot) => {
+              if (snapshot.exists()) {
+                resolve(snapshot.val())
+              } else {
+                resolve({
+                  firstName: "Unknown",
+                  lastName: "User",
+                  profileImageUrl: null,
+                })
+              }
             })
-          }
+            .catch((error) => {
+              console.error("Error getting user data:", error)
+              resolve({
+                firstName: "Unknown",
+                lastName: "User",
+                profileImageUrl: null,
+              })
+            })
+        }
+      } catch (error) {
+        console.error("Error getting enhanced user data:", error)
+        resolve({
+          firstName: "Unknown",
+          lastName: "User",
+          profileImageUrl: null,
         })
-        .catch((error) => {
-          console.error("Error getting user data:", error)
-          resolve({
-            firstName: "Unknown",
-            lastName: "User",
-          })
-        })
+      }
     })
+  }
+
+  // Helper function to get user data (fallback method)
+  function getUserData(userId) {
+    return getUserDataEnhanced(userId)
   }
 
   // Helper function to check user status
@@ -1718,12 +1905,11 @@ document.addEventListener("DOMContentLoaded", () => {
     })
   }
 
-  // Helper function to get initials from name
+  // Helper function to get initials from name (same as comments.js)
   function getInitials(firstName, lastName) {
-    let initials = ""
-    if (firstName) initials += firstName.charAt(0).toUpperCase()
-    if (lastName) initials += lastName.charAt(0).toUpperCase()
-    return initials || "?"
+    // Use global function if available, otherwise use fallback
+    const getInitialsFunction = window.getInitials || getInitialsFallback
+    return getInitialsFunction(firstName, lastName)
   }
 
   // Helper function to format time
@@ -1823,76 +2009,149 @@ document.addEventListener("DOMContentLoaded", () => {
   // ✅ FIXED: Update global function name
   window.openChatFromNotification = openChatFromNotification
 
-  // Initialize the app
-  init()
-
-  // Add this function to the messages.js file
+  // Add this function to the messages.js file with enhanced profile integration
   function setupProfileUpdateListener() {
+    // Listen for profile updates from other components
     document.addEventListener("profileUpdated", (event) => {
       const userId = event.detail.userId
 
+      // If current user profile updated, reload current user data
       if (userId === currentUser?.uid) {
-        loadUserProfile(currentUser)
+        loadCurrentUserData(currentUser)
       }
-    })
 
-    firebase
-      .database()
-      .ref("profileUpdates")
-      .on("child_changed", (snapshot) => {
-        const userId = snapshot.key
-        const timestamp = snapshot.val()
+      // Update conversation header if it's the selected user
+      if (userId === selectedRecipientId) {
+        getUserDataEnhanced(userId).then((userData) => {
+          const userInitials = getInitials(userData.firstName, userData.lastName)
+          const userName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
 
-        if (userId === selectedRecipientId) {
-          getUserData(userId).then((userData) => {
+          document.getElementById("conversation-avatar-text").textContent = userInitials
+          document.getElementById("conversation-name").textContent = userName
+        })
+      }
+
+      // Update conversation items for this user
+      const conversationItems = document.querySelectorAll(`.ursac-conversation-item[data-user-id="${userId}"]`)
+      if (conversationItems.length > 0) {
+        getUserDataEnhanced(userId).then((userData) => {
+          conversationItems.forEach((item) => {
             const userInitials = getInitials(userData.firstName, userData.lastName)
             const userName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
 
-            document.getElementById("conversation-avatar-text").textContent = userInitials
-            document.getElementById("conversation-name").textContent = userName
-          })
-        }
+            const avatarElement = item.querySelector(".ursac-conversation-avatar")
+            if (avatarElement) {
+              if (userData.profileImageUrl) {
+                avatarElement.innerHTML = `<img src="${userData.profileImageUrl}" alt="${userName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+              } else {
+                avatarElement.innerHTML = `<span>${userInitials}</span>`
+              }
+            }
 
-        const conversationItems = document.querySelectorAll(`.ursac-conversation-item[data-user-id="${userId}"]`)
-        if (conversationItems.length > 0) {
-          getUserData(userId).then((userData) => {
-            conversationItems.forEach((item) => {
+            const nameElement = item.querySelector(".ursac-conversation-name")
+            if (nameElement) {
+              nameElement.textContent = userName
+            }
+          })
+        })
+      }
+
+      // Update recipient items for this user
+      const recipientItems = document.querySelectorAll(`.ursac-recipient-item[data-user-id="${userId}"]`)
+      if (recipientItems.length > 0) {
+        getUserDataEnhanced(userId).then((userData) => {
+          recipientItems.forEach((item) => {
+            const userInitials = getInitials(userData.firstName, userData.lastName)
+            const userName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+
+            const avatarElement = item.querySelector(".ursac-recipient-avatar")
+            if (avatarElement) {
+              if (userData.profileImageUrl) {
+                avatarElement.innerHTML = `<img src="${userData.profileImageUrl}" alt="${userName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+              } else {
+                avatarElement.innerHTML = `<span>${userInitials}</span>`
+              }
+            }
+
+            const nameElement = item.querySelector(".ursac-recipient-name")
+            if (nameElement) {
+              nameElement.textContent = userName
+            }
+          })
+        })
+      }
+    })
+
+    // Listen for Firebase profile updates
+    if (currentUser) {
+      firebase
+        .database()
+        .ref("profileUpdates")
+        .on("child_changed", (snapshot) => {
+          const userId = snapshot.key
+          const timestamp = snapshot.val()
+
+          // Trigger the same updates as the event listener above
+          if (userId === currentUser?.uid) {
+            loadCurrentUserData(currentUser)
+          }
+
+          if (userId === selectedRecipientId) {
+            getUserDataEnhanced(userId).then((userData) => {
               const userInitials = getInitials(userData.firstName, userData.lastName)
               const userName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
 
-              const avatarElement = item.querySelector(".ursac-conversation-avatar span")
-              if (avatarElement) {
-                avatarElement.textContent = userInitials
-              }
-
-              const nameElement = item.querySelector(".ursac-conversation-name")
-              if (nameElement) {
-                nameElement.textContent = userName
-              }
+              document.getElementById("conversation-avatar-text").textContent = userInitials
+              document.getElementById("conversation-name").textContent = userName
             })
-          })
-        }
+          }
 
-        const recipientItems = document.querySelectorAll(`.ursac-recipient-item[data-user-id="${userId}"]`)
-        if (recipientItems.length > 0) {
-          getUserData(userId).then((userData) => {
-            recipientItems.forEach((item) => {
+          // Update UI elements for this user
+          const conversationItems = document.querySelectorAll(`.ursac-conversation-item[data-user-id="${userId}"]`)
+          const recipientItems = document.querySelectorAll(`.ursac-recipient-item[data-user-id="${userId}"]`)
+
+          if (conversationItems.length > 0 || recipientItems.length > 0) {
+            getUserDataEnhanced(userId).then((userData) => {
               const userInitials = getInitials(userData.firstName, userData.lastName)
               const userName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
 
-              const avatarElement = item.querySelector(".ursac-recipient-avatar span")
-              if (avatarElement) {
-                avatarElement.textContent = userInitials
-              }
+              // Update conversation items
+              conversationItems.forEach((item) => {
+                const avatarElement = item.querySelector(".ursac-conversation-avatar")
+                if (avatarElement) {
+                  if (userData.profileImageUrl) {
+                    avatarElement.innerHTML = `<img src="${userData.profileImageUrl}" alt="${userName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+                  } else {
+                    avatarElement.innerHTML = `<span>${userInitials}</span>`
+                  }
+                }
 
-              const nameElement = item.querySelector(".ursac-recipient-name")
-              if (nameElement) {
-                nameElement.textContent = userName
-              }
+                const nameElement = item.querySelector(".ursac-conversation-name")
+                if (nameElement) {
+                  nameElement.textContent = userName
+                }
+              })
+
+              // Update recipient items
+              recipientItems.forEach((item) => {
+                const avatarElement = item.querySelector(".ursac-recipient-avatar")
+                if (avatarElement) {
+                  if (userData.profileImageUrl) {
+                    avatarElement.innerHTML = `<img src="${userData.profileImageUrl}" alt="${userName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+                  } else {
+                    avatarElement.innerHTML = `<span>${userInitials}</span>`
+                  }
+                }
+
+                const nameElement = item.querySelector(".ursac-recipient-name")
+                if (nameElement) {
+                  nameElement.textContent = userName
+                }
+              })
             })
-          })
-        }
-      })
+          }
+        })
+    }
   }
 
   // Generic modal function
@@ -1939,4 +2198,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     modalElement.style.display = "flex"
   }
+
+  // Initialize the app
+  init()
 })
+
+console.log("Enhanced messages system with comprehensive profile integration loaded successfully")

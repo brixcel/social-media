@@ -23,25 +23,43 @@ function initializeCommentSystem(user) {
 }
 
 /**
- * Load current user's profile data
+ * Load current user's profile data with retry logic
  * @param {Object} user - Firebase user object
  */
-function loadCurrentUserData(user) {
+async function loadCurrentUserData(user) {
   if (!user) return
 
-  window.firebaseDatabase
-    .ref("users/" + user.uid)
-    .once("value")
-    .then((snapshot) => {
-      currentUserData = snapshot.val()
+  try {
+    // Use the enhanced fetchUserDataWithRetry function from post-manager
+    const userData = await window.fetchUserDataWithRetry(user.uid)
+
+    if (userData) {
+      currentUserData = userData
       console.log("Current user data loaded for comments:", currentUserData)
 
-      // Update all comment input avatars
+      // Update all comment input avatars immediately
       updateCommentInputAvatars()
-    })
-    .catch((error) => {
-      console.error("Error loading current user data for comments:", error)
-    })
+    } else {
+      // Fallback to basic user data
+      console.warn("Could not load full user data, using fallback")
+      currentUserData = {
+        firstName: user.displayName?.split(" ")[0] || "User",
+        lastName: user.displayName?.split(" ")[1] || "",
+        profileImageUrl: user.photoURL || null,
+      }
+      updateCommentInputAvatars()
+    }
+  } catch (error) {
+    console.error("Error loading current user data for comments:", error)
+
+    // Create minimal fallback data
+    currentUserData = {
+      firstName: "User",
+      lastName: "",
+      profileImageUrl: null,
+    }
+    updateCommentInputAvatars()
+  }
 }
 
 /**
@@ -62,12 +80,19 @@ function updateCommentInputAvatars() {
  * @param {Element} avatarElement - Avatar DOM element
  */
 function updateAvatarElement(avatarElement) {
-  if (!currentUserData || !avatarElement) return
+  if (!avatarElement) return
 
-  const initials = window.getInitials(currentUserData.firstName, currentUserData.lastName)
+  // Use currentUserData if available, otherwise create fallback
+  const userData = currentUserData || {
+    firstName: "User",
+    lastName: "",
+    profileImageUrl: null,
+  }
 
-  if (currentUserData.profileImageUrl) {
-    avatarElement.innerHTML = `<img src="${currentUserData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+  const initials = window.getInitials(userData.firstName, userData.lastName)
+
+  if (userData.profileImageUrl) {
+    avatarElement.innerHTML = `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
   } else {
     avatarElement.innerHTML = `<span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #4a76a8; color: white; border-radius: 50%; font-weight: bold; font-size: 14px;">${initials}</span>`
   }
@@ -92,7 +117,7 @@ function loadComments(postId) {
   window.firebaseDatabase
     .ref(`posts/${postId}/comments`)
     .once("value")
-    .then((snapshot) => {
+    .then(async (snapshot) => {
       const comments = snapshot.val()
       commentsList.innerHTML = ""
 
@@ -114,11 +139,11 @@ function loadComments(postId) {
 
         const fragment = document.createDocumentFragment()
 
-        topLevelComments.forEach((comment) => {
+        for (const comment of topLevelComments) {
           comment.replies = repliesByParent[comment.id] || []
-          const commentElement = createCommentElement(comment, postId)
+          const commentElement = await createCommentElement(comment, postId)
           fragment.appendChild(commentElement)
-        })
+        }
 
         commentsList.appendChild(fragment)
       } else {
@@ -132,7 +157,7 @@ function loadComments(postId) {
 }
 
 // Function to create comment element with vertical layout (Facebook-style)
-function createCommentElement(comment, postId, maxVisibleReplies = 3) {
+async function createCommentElement(comment, postId, maxVisibleReplies = 3) {
   const wrapper = document.createElement("div")
   wrapper.className = "ursac-comment-thread"
   wrapper.setAttribute("data-user-id", comment.userId)
@@ -141,12 +166,12 @@ function createCommentElement(comment, postId, maxVisibleReplies = 3) {
   commentElement.className = "ursac-comment"
   commentElement.setAttribute("data-comment-id", comment.id)
 
-  const userInitials = window.getInitials(comment.userFirstName || "", comment.userLastName || "")
   const userName = `${comment.userFirstName || ""} ${comment.userLastName || ""}`.trim() || "Unknown User"
+  const avatarHTML = await getUserAvatar(comment.userId, comment.userFirstName, comment.userLastName)
 
   const commentHTML = `
     <div class="ursac-comment-avatar">
-      <span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #4a76a8; color: white; border-radius: 50%; font-weight: bold; font-size: 14px;">${userInitials}</span>
+      ${avatarHTML}
     </div>
     <div class="ursac-comment-content">
       <div class="ursac-comment-author">${userName}</div>
@@ -176,14 +201,14 @@ function createCommentElement(comment, postId, maxVisibleReplies = 3) {
     const hiddenReplies = sortedReplies.slice(maxVisibleReplies)
 
     // Add visible replies
-    visibleReplies.forEach((reply) => {
-      const replyElement = createReplyElement(reply, postId)
+    for (const reply of visibleReplies) {
+      const replyElement = await createReplyElement(reply, postId)
       repliesContainer.appendChild(replyElement)
-    })
+    }
 
     // Add "View more replies" button if there are hidden replies
     if (hiddenReplies.length > 0) {
-      const viewMoreButton = createViewMoreButton(hiddenReplies, postId)
+      const viewMoreButton = await createViewMoreButton(hiddenReplies, postId)
       repliesContainer.appendChild(viewMoreButton.button)
       repliesContainer.appendChild(viewMoreButton.container)
     }
@@ -195,18 +220,18 @@ function createCommentElement(comment, postId, maxVisibleReplies = 3) {
 }
 
 // Function to create reply element (NO NESTED REPLIES - only direct replies to main comments)
-function createReplyElement(reply, postId) {
+async function createReplyElement(reply, postId) {
   const replyElement = document.createElement("div")
   replyElement.className = "ursac-comment ursac-reply"
   replyElement.setAttribute("data-comment-id", reply.id)
   replyElement.setAttribute("data-user-id", reply.userId)
 
-  const userInitials = window.getInitials(reply.userFirstName || "", reply.userLastName || "")
   const userName = `${reply.userFirstName || ""} ${reply.userLastName || ""}`.trim() || "Unknown User"
+  const avatarHTML = await getUserAvatar(reply.userId, reply.userFirstName, reply.userLastName)
 
   const replyHTML = `
     <div class="ursac-comment-avatar">
-      <span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #4a76a8; color: white; border-radius: 50%; font-weight: bold; font-size: 14px;">${userInitials}</span>
+      ${avatarHTML}
     </div>
     <div class="ursac-comment-content">
       <div class="ursac-comment-author">${userName}</div>
@@ -225,16 +250,16 @@ function createReplyInputContainer(postId, commentId) {
   container.style.display = "none"
   container.setAttribute("data-for-comment", commentId)
 
-  const currentUserInitials = currentUserData
-    ? window.getInitials(currentUserData.firstName, currentUserData.lastName)
-    : window.getInitials("", "")
+  // Use current user data for avatar
+  const userData = currentUserData || { firstName: "User", lastName: "", profileImageUrl: null }
+  const currentUserInitials = window.getInitials(userData.firstName, userData.lastName)
 
   container.innerHTML = `
   <div class="ursac-comment-input-wrapper">
     <div class="ursac-comment-avatar current-user-avatar">
       ${
-        currentUserData?.profileImageUrl
-          ? `<img src="${currentUserData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+        userData.profileImageUrl
+          ? `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
           : `<span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #4a76a8; color: white; border-radius: 50%; font-weight: bold; font-size: 14px;">${currentUserInitials}</span>`
       }
     </div>
@@ -249,7 +274,7 @@ function createReplyInputContainer(postId, commentId) {
   return container
 }
 
-function createViewMoreButton(hiddenReplies, postId) {
+async function createViewMoreButton(hiddenReplies, postId) {
   const button = document.createElement("button")
   button.className = "ursac-view-more-replies"
   const replyCount = hiddenReplies.length
@@ -262,9 +287,10 @@ function createViewMoreButton(hiddenReplies, postId) {
   container.className = "ursac-hidden-replies"
   container.style.display = "none"
 
-  hiddenReplies.forEach((reply) => {
-    container.appendChild(createReplyElement(reply, postId))
-  })
+  for (const reply of hiddenReplies) {
+    const replyElement = await createReplyElement(reply, postId)
+    container.appendChild(replyElement)
+  }
 
   button.addEventListener("click", () => {
     const isExpanded = container.style.display === "block"
@@ -594,6 +620,28 @@ function submitComment(postId) {
       if (submitButton) submitButton.disabled = true
       isSubmittingComment = false
     })
+}
+
+// Enhanced user avatar fetching with better fallback
+const getUserAvatar = async (userId, firstName, lastName) => {
+  try {
+    // Use the enhanced fetchUserDataWithRetry function
+    const userData = await window.fetchUserDataWithRetry(userId)
+
+    if (userData && userData.profileImageUrl) {
+      return `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+    } else {
+      // Use the fetched user data for initials if available
+      const userFirstName = userData?.firstName || firstName || "Unknown"
+      const userLastName = userData?.lastName || lastName || "User"
+      const initials = window.getInitials(userFirstName, userLastName)
+      return `<span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #4a76a8; color: white; border-radius: 50%; font-weight: bold; font-size: 14px;">${initials}</span>`
+    }
+  } catch (error) {
+    console.error("Error fetching user avatar:", error)
+    const initials = window.getInitials(firstName, lastName)
+    return `<span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #4a76a8; color: white; border-radius: 50%; font-weight: bold; font-size: 14px;">${initials}</span>`
+  }
 }
 
 // Export the comment system functions

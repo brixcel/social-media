@@ -90,6 +90,28 @@
       from { opacity: 0; }
       to { opacity: 1; }
     }
+
+    /* Loading spinner */
+    .loading-spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #4361ee;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -119,7 +141,10 @@
         <input type="password" required id="password" minlength="6" />
         <label for="confirm-password">Confirm Password</label>
         <input type="password" required id="confirm-password" minlength="6" />
-        <button type="button" id="submit-btn" class="submit-btn">→</button>
+        <button type="button" id="submit-btn" class="submit-btn">
+          <span class="loading-spinner" id="loading-spinner"></span>
+          <span id="submit-text">→</span>
+        </button>
       </form>
       <!-- Step 3: Email Verification Notice -->
       <div id="step3-verification" class="form-step">
@@ -163,6 +188,8 @@
     const submitBtn = document.getElementById('submit-btn');
     const resendLinkBtn = document.getElementById('resend-link');
     const verifyEmailSpan = document.getElementById('verify-email');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const submitText = document.getElementById('submit-text');
 
     // Modal elements
     const modalOverlay = document.getElementById('modal-overlay');
@@ -172,6 +199,8 @@
 
     let formData = {};
     let currentUser = null;
+    let registrationInProgress = false;
+    let authStateUnsubscribe = null;
 
     // Show modal function (replaces alert)
     function showModal(message, title = 'Notice') {
@@ -188,6 +217,43 @@
       });
     }
 
+    // Show loading state
+    function setLoading(isLoading) {
+      if (isLoading) {
+        loadingSpinner.style.display = 'inline-block';
+        submitText.textContent = 'Creating Account...';
+        submitBtn.disabled = true;
+      } else {
+        loadingSpinner.style.display = 'none';
+        submitText.textContent = '→';
+        submitBtn.disabled = false;
+      }
+    }
+
+    // Function to save user data after authentication is confirmed
+    async function saveUserDataAfterAuth(user, userData) {
+      try {
+        console.log('Attempting to save user data for:', user.uid);
+        console.log('User data:', userData);
+        
+        // Get fresh token to ensure we have the latest auth state
+        const idToken = await user.getIdToken(true);
+        console.log('Got fresh ID token');
+        
+        // Use the database reference with the user's UID
+        const userRef = firebase.database().ref('users/' + user.uid);
+        
+        // Save the user data
+        await userRef.set(userData);
+        console.log('User data saved successfully to database');
+        
+        return true;
+      } catch (error) {
+        console.error('Error saving user data:', error);
+        throw error;
+      }
+    }
+
     // Step 1: Next
     nextBtn.addEventListener('click', function() {
       if (!step1Form.reportValidity()) return;
@@ -201,6 +267,11 @@
 
     // Step 2: Submit and send verification email
     submitBtn.addEventListener('click', async function() {
+      if (registrationInProgress) {
+        console.log('Registration already in progress, ignoring click');
+        return;
+      }
+
       try {
         if (!step2Form.reportValidity()) return;
         
@@ -212,76 +283,175 @@
           return;
         }
         
-        // Disable submit button to prevent double submission
-        submitBtn.disabled = true;
+        registrationInProgress = true;
+        setLoading(true);
         
         formData.studentId = document.getElementById('student-id').value;
         formData.program = document.getElementById('program').value;
         formData.password = password;
 
-        // Check student ID first
-        const idSnapshot = await firebase.database().ref('users')
-          .orderByChild('studentId')
-          .equalTo(formData.studentId)
-          .once('value');
+        console.log('Starting registration process...');
 
-        if (idSnapshot.exists()) {
-          await showModal('This Student ID is already registered. Please use another one.', 'Registration Error');
-          submitBtn.disabled = false;
-          return;
+        // First, check if student ID already exists (this requires read permission)
+        console.log('Checking student ID availability...');
+        try {
+          const idSnapshot = await firebase.database().ref('users')
+            .orderByChild('studentId')
+            .equalTo(formData.studentId)
+            .once('value');
+
+          if (idSnapshot.exists()) {
+            await showModal('This Student ID is already registered. Please use another one.', 'Registration Error');
+            registrationInProgress = false;
+            setLoading(false);
+            return;
+          }
+        } catch (checkError) {
+          console.warn('Could not check student ID availability:', checkError);
+          // Continue with registration even if we can't check
         }
 
-        // Create user account
+        console.log('Creating Firebase Auth user...');
+
+        // Create the authentication user first
         const userCredential = await firebase.auth().createUserWithEmailAndPassword(
           formData.email, 
           formData.password
         );
         
         currentUser = userCredential.user;
+        console.log('Firebase Auth user created:', currentUser.uid);
 
-        // Wait for user to be fully created before continuing
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Save user data to database
-        await firebase.database().ref('users/' + currentUser.uid).set({
+        // Prepare user data
+        const userData = {
           firstName: formData.firstName,
           lastName: formData.lastName,
-          middleName: formData.middleName,
+          middleName: formData.middleName || '',
           studentId: formData.studentId,
           program: formData.program,
           email: formData.email,
           emailVerified: false,
           createdAt: firebase.database.ServerValue.TIMESTAMP
-        });
+        };
 
-        // Send verification email
-        await currentUser.sendEmailVerification({
-          url: window.location.origin + '/login' // Add redirect URL
-        });
-
-        // Get fresh token and sync session
-        const idToken = await currentUser.getIdToken(true);
+        // Set up auth state listener to handle database write when auth is ready
+        console.log('Setting up auth state listener...');
         
-        await fetch('/firebase-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-          },
-          body: JSON.stringify({ idToken: idToken })
+        authStateUnsubscribe = firebase.auth().onAuthStateChanged(async (user) => {
+          if (user && user.uid === currentUser.uid && registrationInProgress) {
+            console.log('Auth state confirmed for user:', user.uid);
+            
+            try {
+              // Now save the user data
+              await saveUserDataAfterAuth(user, userData);
+              
+              // Send verification email
+              console.log('Sending verification email...');
+              await user.sendEmailVerification({
+                url: window.location.origin + '/login'
+              });
+              console.log('Verification email sent');
+
+              // Try to sync session with Laravel backend
+              try {
+                console.log('Syncing session with backend...');
+                const idToken = await user.getIdToken();
+                await fetch('/firebase-session', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                  },
+                  body: JSON.stringify({ idToken: idToken })
+                });
+                console.log('Session synced with backend');
+              } catch (sessionError) {
+                console.warn('Failed to sync session with backend:', sessionError);
+                // Don't fail registration for this
+              }
+
+              // Show success and move to verification step
+              verifyEmailSpan.textContent = formData.email;
+              step2Form.classList.remove('active');
+              step3Verification.classList.add('active');
+              
+              registrationInProgress = false;
+              setLoading(false);
+              
+              // Clean up the auth listener
+              if (authStateUnsubscribe) {
+                authStateUnsubscribe();
+                authStateUnsubscribe = null;
+              }
+              
+              await showModal('Account created successfully! Please check your email and verify your address to complete registration.', 'Registration Successful');
+              
+            } catch (saveError) {
+              console.error('Error during user data save or email verification:', saveError);
+              
+              // Clean up - delete the auth user if we can't save the data
+              try {
+                await user.delete();
+                console.log('Cleaned up auth user after save error');
+              } catch (deleteError) {
+                console.error('Failed to cleanup auth user:', deleteError);
+              }
+              
+              registrationInProgress = false;
+              setLoading(false);
+              
+              if (authStateUnsubscribe) {
+                authStateUnsubscribe();
+                authStateUnsubscribe = null;
+              }
+              
+              await showModal('Registration failed: ' + saveError.message, 'Registration Error');
+            }
+          }
         });
 
-        // Show verification screen
-        verifyEmailSpan.textContent = formData.email;
-        step2Form.classList.remove('active');
-        step3Verification.classList.add('active');
-        
-        await showModal('Verification email sent! Please check your inbox and verify your email address.', 'Success');
+        // Set a timeout to prevent hanging
+        setTimeout(() => {
+          if (registrationInProgress) {
+            console.error('Registration timeout - auth state not confirmed');
+            registrationInProgress = false;
+            setLoading(false);
+            
+            if (authStateUnsubscribe) {
+              authStateUnsubscribe();
+              authStateUnsubscribe = null;
+            }
+            
+            showModal('Registration timed out. Please try again.', 'Registration Error');
+          }
+        }, 30000); // 30 second timeout
 
       } catch (error) {
         console.error('Registration error:', error);
-        await showModal('Registration failed: ' + error.message, 'Registration Error');
-        submitBtn.disabled = false;
+        registrationInProgress = false;
+        setLoading(false);
+        
+        if (authStateUnsubscribe) {
+          authStateUnsubscribe();
+          authStateUnsubscribe = null;
+        }
+        
+        let errorMessage = 'Registration failed: ';
+        
+        // Provide more specific error messages
+        if (error.code === 'auth/email-already-in-use') {
+          errorMessage += 'This email address is already registered. Please use a different email or try logging in.';
+        } else if (error.code === 'auth/weak-password') {
+          errorMessage += 'Password is too weak. Please choose a stronger password.';
+        } else if (error.code === 'auth/invalid-email') {
+          errorMessage += 'Please enter a valid email address.';
+        } else if (error.code === 'auth/network-request-failed') {
+          errorMessage += 'Network error. Please check your internet connection and try again.';
+        } else {
+          errorMessage += error.message;
+        }
+        
+        await showModal(errorMessage, 'Registration Error');
       }
     });
 
@@ -303,6 +473,13 @@
       } catch (error) {
         console.error('Resend verification error:', error);
         await showModal('Failed to resend verification email: ' + error.message, 'Error');
+      }
+    });
+
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+      if (authStateUnsubscribe) {
+        authStateUnsubscribe();
       }
     });
   </script>

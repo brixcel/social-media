@@ -1,15 +1,10 @@
-// Initialize Firebase (replace with your actual Firebase config)
-// For example:
-// const firebaseConfig = {
-//   apiKey: "YOUR_API_KEY",
-//   authDomain: "YOUR_AUTH_DOMAIN",
-//   databaseURL: "YOUR_DATABASE_URL",
-//   projectId: "YOUR_PROJECT_ID",
-//   storageBucket: "YOUR_STORAGE_BUCKET",
-//   messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-//   appId: "YOUR_APP_ID"
-// };
-// firebase.initializeApp(firebaseConfig);
+/**
+ * Updated Profile Page with ProfileManager Integration
+ * Integrates with the centralized ProfileManager for consistent profile data
+ */
+
+// Declare firebase variable
+const firebase = window.firebase
 
 document.addEventListener("DOMContentLoaded", () => {
   // Check if user is authenticated
@@ -22,14 +17,18 @@ document.addEventListener("DOMContentLoaded", () => {
         .then((idToken) => {
           document.cookie = "firebaseToken=" + idToken + "; path=/"
 
-          // Initialize profile page
-          initProfilePage()
-
-          // Load user data from Firebase to ensure we have the latest
-          loadUserData(user.uid)
-
-          // Load user posts
-          loadUserPosts()
+          // Initialize ProfileManager if not already done
+          if (window.profileManager && !window.profileManager.getCurrentUserProfile()) {
+            window.profileManager.initialize(user).then(() => {
+              initProfilePage()
+              loadUserData(user.uid)
+              loadUserPosts()
+            })
+          } else {
+            initProfilePage()
+            loadUserData(user.uid)
+            loadUserPosts()
+          }
         })
         .catch((error) => {
           console.error("Error getting token:", error)
@@ -44,8 +43,19 @@ document.addEventListener("DOMContentLoaded", () => {
   })
 })
 
-// Function to load user data from Firebase
+// Function to load user data using ProfileManager
 function loadUserData(userId) {
+  // Use ProfileManager if available
+  if (window.profileManager) {
+    const profile = window.profileManager.getCurrentUserProfile()
+    if (profile) {
+      updateProfileUI(profile)
+      initializeProfileForm(profile)
+      return
+    }
+  }
+
+  // Fallback to direct Firebase fetch
   firebase
     .database()
     .ref(`users/${userId}`)
@@ -53,10 +63,7 @@ function loadUserData(userId) {
     .then((snapshot) => {
       const userData = snapshot.val()
       if (userData) {
-        // Update the profile UI with the latest data
         updateProfileUI(userData)
-
-        // Initialize form with current user data
         initializeProfileForm(userData)
       }
     })
@@ -65,12 +72,15 @@ function loadUserData(userId) {
     })
 }
 
-// Function to update the profile UI with user data
+// Function to update the profile UI with user data using ProfileManager
 function updateProfileUI(userData) {
   // Update profile name
   const profileName = document.querySelector(".ursac-profile-name")
   if (profileName) {
-    profileName.textContent = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+    const formattedName = window.profileManager
+      ? window.profileManager.getFormattedName(userData.firstName, userData.lastName)
+      : `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+    profileName.textContent = formattedName
   }
 
   // Update profile bio
@@ -85,7 +95,9 @@ function updateProfileUI(userData) {
     if (userData.profileImageUrl) {
       profileAvatar.innerHTML = `<img src="${userData.profileImageUrl}" alt="Profile Image" id="profile-image">`
     } else {
-      const initials = getInitials(userData.firstName, userData.lastName)
+      const initials = window.profileManager
+        ? window.profileManager.getInitials(userData.firstName, userData.lastName)
+        : getInitials(userData.firstName, userData.lastName)
       profileAvatar.innerHTML = `<span>${initials}</span>`
     }
   }
@@ -94,7 +106,7 @@ function updateProfileUI(userData) {
   updateHeaderProfileButton(userData)
 }
 
-// Helper function to get user initials
+// Helper function to get user initials (fallback)
 function getInitials(firstName, lastName) {
   let initials = ""
   if (firstName) {
@@ -103,7 +115,7 @@ function getInitials(firstName, lastName) {
   if (lastName) {
     initials += lastName.charAt(0).toUpperCase()
   }
-  return initials
+  return initials || "?"
 }
 
 function initProfilePage() {
@@ -190,6 +202,28 @@ function initProfilePage() {
       })
     })
   })
+
+  // Setup ProfileManager integration
+  setupProfileManagerIntegration()
+}
+
+// Setup ProfileManager integration for real-time updates
+function setupProfileManagerIntegration() {
+  if (window.profileManager) {
+    // Listen for profile updates
+    window.profileManager.addProfileUpdateListener((profile) => {
+      console.log("Profile updated on profile page:", profile)
+      updateProfileUI(profile)
+    })
+  }
+
+  // Listen for profile updates from other pages
+  document.addEventListener("profileUpdated", (event) => {
+    const userId = event.detail.userId
+    if (userId === firebase.auth().currentUser?.uid) {
+      loadUserData(userId)
+    }
+  })
 }
 
 function updateProfile() {
@@ -227,43 +261,72 @@ function updateProfile() {
     updatedAt: firebase.database.ServerValue.TIMESTAMP,
   }
 
-  // Update directly in Firebase
-  firebase
-    .database()
-    .ref(`users/${user.uid}`)
-    .update(userData)
-    .then(() => {
-      // Show success message
-      showAlert(successAlert, "Profile updated successfully!")
+  // Use ProfileManager to update profile if available
+  if (window.profileManager) {
+    window.profileManager
+      .updateCurrentUserProfile(userData)
+      .then((success) => {
+        if (success) {
+          showAlert(successAlert, "Profile updated successfully!")
 
-      // Update UI
-      updateProfileUI({
-        firstName: firstName,
-        lastName: lastName,
-        bio: bio || "",
-        profileImageUrl: document.getElementById("profile-image")?.src,
+          // Hide the form
+          const profileForm = document.getElementById("profile-form")
+          if (profileForm) {
+            profileForm.style.display = "none"
+          }
+        } else {
+          showAlert(errorAlert, "Failed to update profile. Please try again.")
+        }
       })
+      .catch((error) => {
+        console.error("Error updating profile via ProfileManager:", error)
+        showAlert(errorAlert, "An error occurred while updating your profile: " + error.message)
+      })
+      .finally(() => {
+        // Reset button state
+        if (saveProfileBtn) {
+          saveProfileBtn.textContent = "Save Changes"
+          saveProfileBtn.disabled = false
+        }
+      })
+  } else {
+    // Fallback to direct Firebase update
+    firebase
+      .database()
+      .ref(`users/${user.uid}`)
+      .update(userData)
+      .then(() => {
+        showAlert(successAlert, "Profile updated successfully!")
 
-      // Hide the form
-      const profileForm = document.getElementById("profile-form")
-      if (profileForm) {
-        profileForm.style.display = "none"
-      }
+        // Update UI
+        updateProfileUI({
+          firstName: firstName,
+          lastName: lastName,
+          bio: bio || "",
+          profileImageUrl: document.getElementById("profile-image")?.src,
+        })
 
-      // Broadcast profile update event to update other parts of the app
-      broadcastProfileUpdate(user.uid)
-    })
-    .catch((error) => {
-      console.error("Error updating profile:", error)
-      showAlert(errorAlert, "An error occurred while updating your profile: " + error.message)
-    })
-    .finally(() => {
-      // Reset button state
-      if (saveProfileBtn) {
-        saveProfileBtn.textContent = "Save Changes"
-        saveProfileBtn.disabled = false
-      }
-    })
+        // Hide the form
+        const profileForm = document.getElementById("profile-form")
+        if (profileForm) {
+          profileForm.style.display = "none"
+        }
+
+        // Broadcast profile update event
+        broadcastProfileUpdate(user.uid)
+      })
+      .catch((error) => {
+        console.error("Error updating profile:", error)
+        showAlert(errorAlert, "An error occurred while updating your profile: " + error.message)
+      })
+      .finally(() => {
+        // Reset button state
+        if (saveProfileBtn) {
+          saveProfileBtn.textContent = "Save Changes"
+          saveProfileBtn.disabled = false
+        }
+      })
+  }
 }
 
 function uploadProfileImage(file) {
@@ -286,7 +349,7 @@ function uploadProfileImage(file) {
     const base64data = reader.result.split(",")[1]
 
     // Get ImgBB API key
-    const apiKey = "fa517d5bab87e31f661cb28d7de365ba" // Using the ImgBB API key
+    const apiKey = "fa517d5bab87e31f661cb28d7de365ba"
 
     // Create form data for the API request
     const formData = new FormData()
@@ -320,37 +383,64 @@ function uploadProfileImage(file) {
         // Get the image URL from the response
         const imageUrl = data.data.url
 
-        // Update profile image in Firebase
-        if (firebase.auth().currentUser) {
-          firebase
-            .database()
-            .ref(`users/${firebase.auth().currentUser.uid}`)
-            .update({
+        // Update profile image using ProfileManager if available
+        if (window.profileManager) {
+          window.profileManager
+            .updateCurrentUserProfile({
               profileImageUrl: imageUrl,
-              updatedAt: firebase.database.ServerValue.TIMESTAMP,
             })
-            .then(() => {
-              // Update profile image in UI
-              const profileImage = document.getElementById("profile-image")
-              if (profileImage) {
-                profileImage.src = imageUrl
-              } else {
-                const profileAvatar = document.getElementById("profile-avatar")
-                if (profileAvatar) {
-                  profileAvatar.innerHTML = `<img src="${imageUrl}" alt="Profile Image" id="profile-image">`
+            .then((success) => {
+              if (success) {
+                // Update profile image in UI
+                const profileImage = document.getElementById("profile-image")
+                if (profileImage) {
+                  profileImage.src = imageUrl
+                } else {
+                  const profileAvatar = document.getElementById("profile-avatar")
+                  if (profileAvatar) {
+                    profileAvatar.innerHTML = `<img src="${imageUrl}" alt="Profile Image" id="profile-image">`
+                  }
                 }
+
+                showAlert(successAlert, "Profile image updated successfully!")
+              } else {
+                showAlert(errorAlert, "Failed to update profile image. Please try again.")
               }
-
-              // Show success message
-              showAlert(successAlert, "Profile image updated successfully!")
-
-              // Broadcast profile update event to update other parts of the app
-              broadcastProfileUpdate(firebase.auth().currentUser.uid)
             })
             .catch((error) => {
-              console.error("Error updating profile image in Firebase:", error)
-              showAlert(errorAlert, "An error occurred while updating your profile image in the database.")
+              console.error("Error updating profile image via ProfileManager:", error)
+              showAlert(errorAlert, "An error occurred while updating your profile image.")
             })
+        } else {
+          // Fallback to direct Firebase update
+          if (firebase.auth().currentUser) {
+            firebase
+              .database()
+              .ref(`users/${firebase.auth().currentUser.uid}`)
+              .update({
+                profileImageUrl: imageUrl,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP,
+              })
+              .then(() => {
+                // Update profile image in UI
+                const profileImage = document.getElementById("profile-image")
+                if (profileImage) {
+                  profileImage.src = imageUrl
+                } else {
+                  const profileAvatar = document.getElementById("profile-avatar")
+                  if (profileAvatar) {
+                    profileAvatar.innerHTML = `<img src="${imageUrl}" alt="Profile Image" id="profile-image">`
+                  }
+                }
+
+                showAlert(successAlert, "Profile image updated successfully!")
+                broadcastProfileUpdate(firebase.auth().currentUser.uid)
+              })
+              .catch((error) => {
+                console.error("Error updating profile image in Firebase:", error)
+                showAlert(errorAlert, "An error occurred while updating your profile image in the database.")
+              })
+          }
         }
       })
       .catch((error) => {
@@ -388,25 +478,31 @@ function broadcastProfileUpdate(userId) {
 function updateHeaderProfileButton(userData) {
   const userProfileBtn = document.getElementById("user-profile-btn")
   if (userProfileBtn && userData) {
-    const initials = getInitials(userData.firstName, userData.lastName)
-    const fullName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+    const initials = window.profileManager
+      ? window.profileManager.getInitials(userData.firstName, userData.lastName)
+      : getInitials(userData.firstName, userData.lastName)
+
+    const fullName = window.profileManager
+      ? window.profileManager.getFormattedName(userData.firstName, userData.lastName)
+      : `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+
     const email = firebase.auth().currentUser?.email || ""
 
     // Update profile button
     userProfileBtn.innerHTML = `
-            <div class="ursac-profile-avatar">
-                ${
-                  userData.profileImageUrl
-                    ? `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
-                    : `<span>${initials}</span>`
-                }
-            </div>
-            <div class="ursac-profile-info">
-                <div class="ursac-profile-name">${fullName}</div>
-                <div class="ursac-profile-email">${email}</div>
-            </div>
-            <i class="fas fa-chevron-down"></i>
-        `
+      <div class="ursac-profile-avatar">
+        ${
+          userData.profileImageUrl
+            ? `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+            : `<span>${initials}</span>`
+        }
+      </div>
+      <div class="ursac-profile-info">
+        <div class="ursac-profile-name">${fullName}</div>
+        <div class="ursac-profile-email">${email}</div>
+      </div>
+      <i class="fas fa-chevron-down"></i>
+    `
   }
 }
 
@@ -473,37 +569,44 @@ function loadUserPosts() {
           .sort((a, b) => b.timestamp - a.timestamp)
 
         // Process each post
-        postsArray.forEach((post) => {
-          // Get user data
-          firebase
-            .database()
-            .ref(`users/${post.userId}`)
-            .once("value")
-            .then((userSnapshot) => {
-              const userData = userSnapshot.val()
+        postsArray.forEach(async (post) => {
+          try {
+            // Get user data using ProfileManager
+            let userData = null
+            if (window.profileManager) {
+              userData = await window.profileManager.getUserProfile(post.userId)
+            }
 
-              // Create post element
-              const postElement = createPostElement(post, userData)
+            if (!userData) {
+              // Fallback to direct Firebase fetch
+              const userSnapshot = await firebase.database().ref(`users/${post.userId}`).once("value")
+              userData = userSnapshot.val()
+            }
 
-              // Add to feed
-              userPostsFeed.appendChild(postElement)
-            })
+            // Create post element
+            const postElement = createPostElement(post, userData)
+
+            // Add to feed
+            userPostsFeed.appendChild(postElement)
+          } catch (error) {
+            console.error("Error loading post data:", error)
+          }
         })
       } else {
         userPostsFeed.innerHTML = `
-                    <div class="ursac-no-posts">
-                        <p>You haven't created any posts yet.</p>
-                    </div>
-                `
+          <div class="ursac-no-posts">
+            <p>You haven't created any posts yet.</p>
+          </div>
+        `
       }
     })
     .catch((error) => {
       console.error("Error loading user posts:", error)
       userPostsFeed.innerHTML = `
-                <div class="ursac-no-posts">
-                    <p>Error loading posts. Please refresh the page.</p>
-                </div>
-            `
+        <div class="ursac-no-posts">
+          <p>Error loading posts. Please refresh the page.</p>
+        </div>
+      `
     })
 }
 
@@ -640,7 +743,7 @@ function loadComments(postId) {
     .database()
     .ref(`posts/${postId}/comments`)
     .once("value")
-    .then((snapshot) => {
+    .then(async (snapshot) => {
       const comments = snapshot.val()
 
       if (comments) {
@@ -653,37 +756,44 @@ function loadComments(postId) {
           .sort((a, b) => a.timestamp - b.timestamp)
 
         // Process each comment
-        commentsArray.forEach((comment) => {
-          // Get user data
-          firebase
-            .database()
-            .ref(`users/${comment.userId}`)
-            .once("value")
-            .then((userSnapshot) => {
-              const userData = userSnapshot.val()
+        for (const comment of commentsArray) {
+          try {
+            // Get user data using ProfileManager
+            let userData = null
+            if (window.profileManager) {
+              userData = await window.profileManager.getUserProfile(comment.userId)
+            }
 
-              // Create comment element
-              const commentElement = createCommentElement(comment, userData)
+            if (!userData) {
+              // Fallback to direct Firebase fetch
+              const userSnapshot = await firebase.database().ref(`users/${comment.userId}`).once("value")
+              userData = userSnapshot.val()
+            }
 
-              // Add to list
-              commentsListElement.appendChild(commentElement)
-            })
-        })
+            // Create comment element
+            const commentElement = createCommentElement(comment, userData)
+
+            // Add to list
+            commentsListElement.appendChild(commentElement)
+          } catch (error) {
+            console.error("Error loading comment data:", error)
+          }
+        }
       } else {
         commentsListElement.innerHTML = `
-                    <div class="ursac-no-comments">
-                        <p>No comments yet. Be the first to comment!</p>
-                    </div>
-                `
+          <div class="ursac-no-comments">
+            <p>No comments yet. Be the first to comment!</p>
+          </div>
+        `
       }
     })
     .catch((error) => {
       console.error("Error loading comments:", error)
       commentsListElement.innerHTML = `
-                <div class="ursac-no-comments">
-                    <p>Error loading comments. Please try again.</p>
-                </div>
-            `
+        <div class="ursac-no-comments">
+          <p>Error loading comments. Please try again.</p>
+        </div>
+      `
     })
 }
 
@@ -692,22 +802,30 @@ function createCommentElement(comment, userData) {
   commentElement.className = "ursac-comment"
   commentElement.setAttribute("data-comment-id", comment.id)
 
-  const userInitials = getInitials(userData?.firstName, userData?.lastName)
-  const userName = userData ? `${userData.firstName || ""} ${userData.lastName || ""}`.trim() : "Unknown User"
+  const userInitials = window.profileManager
+    ? window.profileManager.getInitials(userData?.firstName, userData?.lastName)
+    : getInitials(userData?.firstName, userData?.lastName)
+
+  const userName = window.profileManager
+    ? window.profileManager.getFormattedName(userData?.firstName, userData?.lastName)
+    : userData
+      ? `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+      : "Unknown User"
+
   const commentTime = formatTimeAgo(new Date(comment.timestamp))
 
   commentElement.innerHTML = `
-        <div class="ursac-comment-avatar">
-            <span>${userInitials}</span>
-        </div>
-        <div class="ursac-comment-content">
-            <div class="ursac-comment-header">
-                <div class="ursac-comment-author">${userName}</div>
-                <div class="ursac-comment-time">${commentTime}</div>
-            </div>
-            <div class="ursac-comment-text">${linkifyText(comment.text)}</div>
-        </div>
-    `
+    <div class="ursac-comment-avatar">
+      <span>${userInitials}</span>
+    </div>
+    <div class="ursac-comment-content">
+      <div class="ursac-comment-header">
+        <div class="ursac-comment-author">${userName}</div>
+        <div class="ursac-comment-time">${commentTime}</div>
+      </div>
+      <div class="ursac-comment-text">${linkifyText(comment.text)}</div>
+    </div>
+  `
 
   return commentElement
 }
@@ -812,96 +930,94 @@ function createPostElement(post, userData) {
   postCard.setAttribute("data-post-id", postId)
   postCard.setAttribute("data-user-id", post.userId)
 
-  // Get user initials for avatar
-  const userInitials = getInitials(userData?.firstName, userData?.lastName)
-  const userName = userData ? `${userData.firstName || ""} ${userData.lastName || ""}`.trim() : "Unknown User"
+  // Get user initials for avatar using ProfileManager
+  const userInitials = window.profileManager
+    ? window.profileManager.getInitials(userData?.firstName, userData?.lastName)
+    : getInitials(userData?.firstName, userData?.lastName)
+
+  const userName = window.profileManager
+    ? window.profileManager.getFormattedName(userData?.firstName, userData?.lastName)
+    : userData
+      ? `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+      : "Unknown User"
 
   // Create post HTML structure
   let postHTML = `
-        <div class="ursac-post-header">
-            <div class="ursac-profile-avatar">
-                ${
-                  userData?.profileImageUrl
-                    ? `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
-                    : `<span>${userInitials}</span>`
-                }
-            </div>
-            <div class="ursac-post-meta">
-                <div class="ursac-post-author">${userName}</div>
-                <div class="ursac-post-time">${timeAgo}</div>
-            </div>
-        </div>
-        <div class="ursac-post-content">
-            ${post.content ? `<p>${linkifyText(post.content)}</p>` : ""}
-    `
+    <div class="ursac-post-header">
+      <div class="ursac-profile-avatar">
+        ${
+          userData?.profileImageUrl
+            ? `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+            : `<span>${userInitials}</span>`
+        }
+      </div>
+      <div class="ursac-post-meta">
+        <div class="ursac-post-author">${userName}</div>
+        <div class="ursac-post-time">${timeAgo}</div>
+      </div>
+    </div>
+    <div class="ursac-post-content">
+      ${post.content ? `<p>${linkifyText(post.content)}</p>` : ""}
+  `
 
   // Add media content if available
   if (post.mediaURL) {
     if (post.mediaType === "image") {
       postHTML += `
-                <div class="ursac-post-media">
-                    <img src="${post.mediaURL}" alt="Post image" loading="lazy">
-                </div>
-            `
-    } else if (post.mediaType === "video") {
-      postHTML += `
-                <div class="ursac-post-media">
-                    <video controls>
-                        <source src="${post.mediaURL}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                </div>
-            `
+        <div class="ursac-post-media">
+          <img src="${post.mediaURL}" alt="Post image" loading="lazy">
+        </div>
+      `
     } else if (post.mediaType === "file") {
       postHTML += `
-                <div class="ursac-post-attachment">
-                    <a href="${post.mediaURL}" target="_blank" class="ursac-attachment-link">
-                        <i class="fas fa-paperclip"></i>
-                        <span>${post.mediaName || "Attachment"}</span>
-                        ${post.mediaSize ? `<small>(${post.mediaSize})</small>` : ""}
-                    </a>
-                </div>
-            `
+        <div class="ursac-post-attachment">
+          <a href="${post.mediaURL}" target="_blank" class="ursac-attachment-link">
+            <i class="fas fa-paperclip"></i>
+            <span>${post.mediaName || "Attachment"}</span>
+            ${post.mediaSize ? `<small>(${post.mediaSize})</small>` : ""}
+          </a>
+        </div>
+      `
     }
   }
 
   // Add post actions
   postHTML += `
+    </div>
+    <div class="ursac-post-footer">
+      <div class="ursac-post-stat" onclick="likePost('${postId}')">
+        <i class="${hasLiked ? "fas" : "far"} fa-thumbs-up"></i>
+        <span class="like-count">${likesCount}</span>
+      </div>
+      <div class="ursac-post-stat" onclick="toggleComments(this)">
+        <i class="far fa-comment"></i>
+        <span class="comment-count">${commentsCount}</span>
+      </div>
+      <div class="ursac-post-stat" onclick="sharePost('${postId}')">
+        <i class="far fa-share-square"></i>
+      </div>
+      <div class="ursac-post-stat" onclick="deletePost('${postId}')">
+        <i class="far fa-trash-alt"></i>
+      </div>
+    </div>
+    <div class="ursac-post-comments" style="display: none;">
+      <div class="ursac-comment-input-wrapper">
+        <div class="ursac-comment-avatar">
+          <span>${getInitials(firebase.auth().currentUser?.displayName || "", "")}</span>
         </div>
-        <div class="ursac-post-footer">
-            <div class="ursac-post-stat" onclick="likePost('${postId}')">
-                <i class="${hasLiked ? "fas" : "far"} fa-thumbs-up"></i>
-                <span class="like-count">${likesCount}</span>
-            </div>
-            <div class="ursac-post-stat" onclick="toggleComments(this)">
-                <i class="far fa-comment"></i>
-                <span class="comment-count">${commentsCount}</span>
-            </div>
-            <div class="ursac-post-stat" onclick="sharePost('${postId}')">
-                <i class="far fa-share-square"></i>
-            </div>
-            <div class="ursac-post-stat" onclick="deletePost('${postId}')">
-                <i class="far fa-trash-alt"></i>
-            </div>
+        <div class="ursac-comment-input-container">
+          <input type="text" class="ursac-comment-input" placeholder="Write a comment...">
+          <button class="ursac-comment-submit" onclick="submitComment('${postId}')">
+            <i class="fas fa-paper-plane"></i>
+          </button>
         </div>
-        <div class="ursac-post-comments" style="display: none;">
-            <div class="ursac-comment-input-wrapper">
-                <div class="ursac-comment-avatar">
-                    <span>${getInitials(firebase.auth().currentUser?.displayName || "", "")}</span>
-                </div>
-                <div class="ursac-comment-input-container">
-                    <input type="text" class="ursac-comment-input" placeholder="Write a comment...">
-                    <button class="ursac-comment-submit" onclick="submitComment('${postId}')">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="ursac-comments-list">
-                <!-- Comments will be loaded dynamically -->
-            </div>
-        </div>
-    `
+      </div>
+      
+      <div class="ursac-comments-list">
+        <!-- Comments will be loaded dynamically -->
+      </div>
+    </div>
+  `
 
   postCard.innerHTML = postHTML
   return postCard
@@ -961,78 +1077,4 @@ window.toggleComments = toggleComments
 window.submitComment = submitComment
 window.sharePost = sharePost
 
-// Listen for profile updates from other pages
-document.addEventListener("profileUpdated", (event) => {
-  const userId = event.detail.userId
-
-  // If this is the current user, update the UI
-  if (userId === firebase.auth().currentUser?.uid) {
-    loadUserData(userId)
-  }
-})
-
-// Set up a listener for profile updates in Firebase
-function setupProfileUpdateListener() {
-  const currentUser = firebase.auth().currentUser
-  if (!currentUser) return
-
-  // Listen for changes to the profileUpdates node
-  firebase
-    .database()
-    .ref("profileUpdates")
-    .on("child_changed", (snapshot) => {
-      const userId = snapshot.key
-      const timestamp = snapshot.val()
-
-      // If this is not the current user, update the UI
-      if (userId !== currentUser.uid) {
-        // Check if this user's data is displayed on the page
-        const userElements = document.querySelectorAll(`[data-user-id="${userId}"]`)
-        if (userElements.length > 0) {
-          // Refresh user data
-          firebase
-            .database()
-            .ref(`users/${userId}`)
-            .once("value")
-            .then((snapshot) => {
-              const userData = snapshot.val()
-              if (userData) {
-                // Update all elements with this user's data
-                userElements.forEach((element) => {
-                  // Update based on element type
-                  if (element.classList.contains("ursac-post-card")) {
-                    // Update post author
-                    const authorElement = element.querySelector(".ursac-post-author")
-                    if (authorElement) {
-                      authorElement.textContent = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
-                    }
-
-                    // Update avatar
-                    const avatarElement = element.querySelector(".ursac-profile-avatar")
-                    if (avatarElement) {
-                      if (userData.profileImageUrl) {
-                        avatarElement.innerHTML = `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
-                      } else {
-                        const initials = getInitials(userData.firstName, userData.lastName)
-                        avatarElement.innerHTML = `<span>${initials}</span>`
-                      }
-                    }
-                  }
-
-                  // Add more element types as needed
-                })
-              }
-            })
-        }
-      }
-    })
-}
-
-// Initialize profile update listener
-document.addEventListener("DOMContentLoaded", () => {
-  firebase.auth().onAuthStateChanged((user) => {
-    if (user) {
-      setupProfileUpdateListener()
-    }
-  })
-})
+console.log("Updated Profile page with ProfileManager integration loaded successfully")

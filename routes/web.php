@@ -49,9 +49,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::delete('/users/{id}', [UserController::class, 'deleteUser'])->name('users.delete');
 });
 // Public routes
-Route::get('/', function() {
-    return view('welcome');
-});
 
 
 

@@ -1,6 +1,6 @@
 /**
- * User Authentication and Profile Management
- * Handles user login, profile loading, and authentication state
+ * Updated User Authentication and Profile Management
+ * Integrates with ProfileManager for consistent profile data
  */
 
 // Global variables for user management
@@ -18,47 +18,78 @@ function getCurrentUser() {
 }
 
 /**
- * Load and display user profile information
+ * Load and display user profile information using ProfileManager
  * @param {Object} user - Firebase user object
  */
 function loadUserProfile(user) {
   if (!user) return
 
+  // Initialize ProfileManager if not already done
+  if (window.profileManager && !window.profileManager.getCurrentUserProfile()) {
+    window.profileManager.initialize(user)
+  }
+
+  // Use ProfileManager if available
+  if (window.profileManager) {
+    const profile = window.profileManager.getCurrentUserProfile()
+    if (profile) {
+      updateProfileDisplay(profile, user.email)
+      return
+    }
+  }
+
+  // Fallback to direct Firebase fetch
   window.firebaseDatabase
     .ref("users/" + user.uid)
     .once("value")
     .then((snapshot) => {
       const userData = snapshot.val()
-
-      if (userData && userProfileBtn) {
-        const initials = window.getInitials(userData.firstName, userData.lastName)
-        const fullName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
-
-        userProfileBtn.innerHTML = `
-          <div class="ursac-profile-avatar">
-            ${
-              userData.profileImageUrl
-                ? `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
-                : `<span>${initials}</span>`
-            }
-          </div>
-          <div class="ursac-profile-info">
-            <div class="ursac-profile-name">${fullName}</div>
-            <div class="ursac-profile-email">${user.email}</div>
-          </div>
-          <i class="fas fa-chevron-down"></i>
-        `
-
-        // Update create post UI elements
-        updateCreatePostUI(userData, initials, fullName)
-
-        // Update all comment input avatars
-        updateAllCommentInputAvatars(userData, initials)
-      }
+      updateProfileDisplay(userData, user.email)
     })
     .catch((error) => {
       console.error("Error loading user profile:", error)
     })
+}
+
+/**
+ * Update profile display with user data
+ * @param {Object} userData - User data object
+ * @param {string} email - User email
+ */
+function updateProfileDisplay(userData, email) {
+  if (userData && userProfileBtn) {
+    // Use ProfileManager for consistent formatting
+    const initials = window.profileManager
+      ? window.profileManager.getInitials(userData.firstName, userData.lastName)
+      : window.getInitials(userData.firstName, userData.lastName)
+
+    const fullName = window.profileManager
+      ? window.profileManager.getFormattedName(userData.firstName, userData.lastName)
+      : `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+
+    userProfileBtn.innerHTML = `
+      <div class="ursac-profile-avatar">
+        ${
+          userData.profileImageUrl
+            ? `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+            : `<span>${initials}</span>`
+        }
+      </div>
+      <div class="ursac-profile-info">
+        <div class="ursac-profile-name">${fullName}</div>
+        <div class="ursac-profile-email">${email}</div>
+      </div>
+      <i class="fas fa-chevron-down"></i>
+    `
+
+    userProfileBtn.style.cursor = "pointer"
+
+    // Update create post UI elements
+    updateCreatePostUI(userData, initials, fullName)
+
+    // Update all comment input avatars
+    updateAllCommentInputAvatars(userData, initials)
+  }
 }
 
 /**
@@ -165,9 +196,21 @@ function initializeProfileElements() {
 }
 
 /**
- * Setup profile update listener for real-time updates
+ * Setup profile update listener for real-time updates with ProfileManager integration
  */
 function setupProfileUpdateListener() {
+  // Listen for ProfileManager updates
+  if (window.profileManager) {
+    window.profileManager.addProfileUpdateListener((profile) => {
+      console.log("Profile updated via ProfileManager:", profile)
+      const currentUser = getCurrentUser()
+      if (profile.uid === currentUser?.uid) {
+        updateProfileDisplay(profile, currentUser.email)
+      }
+    })
+  }
+
+  // Listen for custom profile update events
   document.addEventListener("profileUpdated", (event) => {
     const userId = event.detail.userId
     const currentUser = getCurrentUser()
@@ -176,6 +219,7 @@ function setupProfileUpdateListener() {
     }
   })
 
+  // Listen for Firebase profile updates
   if (!window.firebaseDatabase) {
     console.warn("Firebase database not available for profile updates")
     return
@@ -224,7 +268,10 @@ function setupProfileUpdateListener() {
 function updatePostWithUserData(postElement, userData) {
   const authorElement = postElement.querySelector(".ursac-post-author")
   if (authorElement) {
-    authorElement.textContent = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+    const formattedName = window.profileManager
+      ? window.profileManager.getFormattedName(userData.firstName, userData.lastName)
+      : `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+    authorElement.textContent = formattedName
   }
 
   const avatarElement = postElement.querySelector(".ursac-profile-avatar")
@@ -232,7 +279,9 @@ function updatePostWithUserData(postElement, userData) {
     if (userData.profileImageUrl) {
       avatarElement.innerHTML = `<img src="${userData.profileImageUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
     } else {
-      const initials = window.getInitials(userData.firstName, userData.lastName)
+      const initials = window.profileManager
+        ? window.profileManager.getInitials(userData.firstName, userData.lastName)
+        : window.getInitials(userData.firstName, userData.lastName)
       avatarElement.innerHTML = `<span>${initials}</span>`
     }
   }
@@ -246,12 +295,17 @@ function updatePostWithUserData(postElement, userData) {
 function updateCommentWithUserData(commentElement, userData) {
   const authorElement = commentElement.querySelector(".ursac-comment-author")
   if (authorElement) {
-    authorElement.textContent = `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+    const formattedName = window.profileManager
+      ? window.profileManager.getFormattedName(userData.firstName, userData.lastName)
+      : `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
+    authorElement.textContent = formattedName
   }
 
   const avatarElement = commentElement.querySelector(".ursac-comment-avatar span")
   if (avatarElement) {
-    const initials = window.getInitials(userData.firstName, userData.lastName)
+    const initials = window.profileManager
+      ? window.profileManager.getInitials(userData.firstName, userData.lastName)
+      : window.getInitials(userData.firstName, userData.lastName)
     avatarElement.textContent = initials
   }
 }
@@ -278,3 +332,5 @@ window.getCurrentUser = getCurrentUser
 window.loadUserProfile = loadUserProfile
 window.initializeProfileElements = initializeProfileElements
 window.setupProfileUpdateListener = setupProfileUpdateListener
+
+console.log("Updated User Authentication with ProfileManager integration loaded successfully")

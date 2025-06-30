@@ -240,7 +240,7 @@
     }
   });
   </script>
-  <script src="script.js"></script>
+  <script src="user-data-utils.js"></script>
   <script src="notifications.js"></script>
   <script src="messages.js"></script>
 </body>
