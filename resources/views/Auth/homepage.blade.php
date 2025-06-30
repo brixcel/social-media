@@ -124,34 +124,7 @@
     </div>
     
     <!-- Right Sidebar -->
-    <div class="ursac-sidebar-right">
-      <!-- Forums Section -->
-      <div class="ursac-sidebar-section" id="forum-section">
-        <h3 class="ursac-sidebar-title">
-          Forums
-          <button class="ursac-add-forum-btn" id="add-forum-btn" style="float: right; background: none; border: none; cursor: pointer;">
-            <i class="fas fa-plus-circle" style="color: var(--primary-color); font-size: 1.2em;"></i>
-          </button>
-        </h3>
-        
-        <!-- Forum Modal -->
-        <div id="addForumModal" class="custom-modal">
-          <div class="custom-modal-box">
-            <span id="closeModalBtn" class="custom-close">&times;</span>
-            <a href="{{ route('join') }}" class="custom-button custom-button-primary" id="join-forum-btn">
-              <i class="fas fa-sign-in-alt"></i>
-              <span>Join a Forum</span>
-            </a>
-            <a href="{{ route('create') }}" class="custom-button custom-button-secondary" id="create-forum-btn">
-              <i class="fas fa-plus-circle"></i>
-              <span>Create Your Forum</span>
-            </a>
-          </div>
-        </div>
-        
-        <div class="ursac-forum-list"></div>
-      </div>
-    </div>
+    <!--  -->
   </div>
 
   <!-- Post Modal -->
