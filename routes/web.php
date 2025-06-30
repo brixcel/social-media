@@ -48,6 +48,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/users/{id}/unban', [UserController::class, 'unbanUser'])->name('users.unban');
     Route::delete('/users/{id}', [UserController::class, 'deleteUser'])->name('users.delete');
 });
+// Public routes
+Route::get('/', function() {
+    return view('welcome');
+});
+
 
 
 // Add this route for handling post creation from homepage
