@@ -231,6 +231,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-storage.js"></script>
   
   <!-- Load scripts in correct order -->
+  <script src="user-data-utils.js"></script>
   <script src="firebase-config.js"></script>
   <script src="content-filter.js"></script>
   <script src="ui-helpers.js"></script>
@@ -241,5 +242,6 @@
   <script src="notification-system.js"></script>
   <script src="main-app.js"></script>
   <script src="comments.js"></script>
+  
 </body>
 </html>

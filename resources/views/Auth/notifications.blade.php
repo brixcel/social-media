@@ -77,7 +77,6 @@
         <div class="ursac-filter-options">
           <div class="ursac-filter-option active" data-filter="all">All</div>
           <div class="ursac-filter-option" data-filter="unread">Unread</div>
-          <div class="ursac-filter-option" data-filter="mentions">Mentions</div>
         </div>
         <div class="ursac-mark-all-read" id="mark-all-read">
           <i class="fas fa-check-double"></i> Mark all as read
@@ -174,12 +173,17 @@
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
   </script>
-  <script src="script.js"></script>
-<<<<<<< HEAD
-  <script type="module" src="notifications.js"></script>
-=======
+  <script src="firebase-config.js"></script>
+  <script src="content-filter.js"></script>
+  <script src="ui-helpers.js"></script>
+  <script src="user-authentication.js"></script>
+  <script src="media-handler.js"></script>
+  <script src="post-manager.js"></script>
+  <script src="post-interactions.js"></script>
+  <script src="notification-system.js"></script>
+  <script src="main-app.js"></script>
+  <script src="user-data-utils.js"></script>
   <script src="notifications.js"></script>
   <script src="messages.js"></script>
 </body>
->>>>>>> 466e93e0987f5db1fba918d3f155c0d7d54ea531
 </html>
