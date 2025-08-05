@@ -63,9 +63,9 @@
     
     <!-- Main Content -->
     <div class="ursac-content-main">
-      <div class="ursac-header-search">
+      <!-- <div class="ursac-header-search">
         <input type="text" id="search-input" placeholder="Search..." />
-      </div>
+      </div> -->
       
       <!-- Tabs -->
       <div class="ursac-content-tabs">
@@ -97,17 +97,17 @@
               </label>
               <input type="file" id="file-photo" accept="image/*" style="display: none;">
               
-              <label for="file-video" class="ursac-post-action">
+              <!-- <label for="file-video" class="ursac-post-action">
                 <i class="fas fa-video"></i>
                 <span>Video</span>
               </label>
-              <input type="file" id="file-video" accept="video/*" style="display: none;">
+              <input type="file" id="file-video" accept="video/*" style="display: none;"> -->
               
-              <label for="file-attachment" class="ursac-post-action">
+              <!-- <label for="file-attachment" class="ursac-post-action">
                 <i class="fas fa-paperclip"></i>
                 <span>Attachment</span>
               </label>
-              <input type="file" id="file-attachment" style="display: none;">
+              <input type="file" id="file-attachment" style="display: none;"> -->
             </div>
             
             <button class="ursac-post-button" id="post-button" disabled>
@@ -137,10 +137,10 @@
         <div class="ursac-post-action-group">
           <label for="modal-file-photo" class="ursac-post-action"><i class="fas fa-image"></i></label>
           <input type="file" id="modal-file-photo" accept="image/*" style="display:none;">
-          <label for="modal-file-video" class="ursac-post-action"><i class="fas fa-video"></i></label>
+          <!-- <label for="modal-file-video" class="ursac-post-action"><i class="fas fa-video"></i></label>
           <input type="file" id="modal-file-video" accept="video/*" style="display:none;">
           <label for="modal-file-attachment" class="ursac-post-action"><i class="fas fa-paperclip"></i></label>
-          <input type="file" id="modal-file-attachment" style="display:none;">
+          <input type="file" id="modal-file-attachment" style="display:none;"> -->
         </div>
         <button class="ursac-post-button" id="modal-post-button" disabled>Post</button>
       </div>
