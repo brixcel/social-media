@@ -70,6 +70,11 @@
         <input type="text" id="search-input" placeholder="Search..." />
       </div>
       
+      <!-- DEMO BANNER -->
+      <div style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 12px 16px; margin: 15px; border-radius: 8px; font-size: 0.9rem;">
+        <strong>⚠️ DEMO ENVIRONMENT:</strong> This platform is running in local demonstration mode with pre-populated sample data. Some live features may not work properly.
+      </div>
+      
       <!-- Tabs -->
       <div class="ursac-content-tabs">
         <div class="ursac-tab ursac-tab-active">Posts</div>

@@ -5,9 +5,9 @@
 @section('header', 'Manage Pages')
 
 @section('content')
-<div class="mb-4">
-    <a href="{{ route('pages.create') }}" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">
-        Create New Page
+<div class="mb-4 flex justify-between items-center">
+    <a href="{{ route('admin.pages') }}" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded font-medium text-sm">
+        Manage Pages
     </a>
 </div>
 
@@ -19,38 +19,29 @@
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Slug</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
         </thead>
-         <tbody class="bg-white divide-y divide-gray-200">
-            @if(isset($pages) && $pages->isNotEmpty())
-                @foreach($pages as $page)
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap">{{ $page->title }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">{{ $page->slug }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $page->status == 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' }}">
-                                {{ ucfirst($page->status) }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            {{ $page->created_at->format('M d, Y') }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <a href="{{ route('pages.edit', $page->id) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
-                            <form action="{{ route('pages.destroy', $page->id) }}" method="POST" class="inline">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-red-600 hover:text-red-900" onclick="return confirm('Are you sure you want to delete this page?')">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
-                @endforeach
-            @else
+        <tbody class="bg-white divide-y divide-gray-200">
+            @forelse($pages as $id => $page)
                 <tr>
-                    <td colspan="5" class="px-6 py-4 text-center">No pages found</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ is_array($page) ? $page['title'] : $page->title }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ is_array($page) ? $page['slug'] : $page->slug }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        @php $status = is_array($page) ? $page['status'] : $page->status; @endphp
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $status == 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' }}">
+                            {{ ucfirst($status) }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        @php $createdAt = is_array($page) ? $page['created_at'] : $page->created_at; @endphp
+                        {{ is_numeric($createdAt) ? date('M d, Y', $createdAt) : ($createdAt ? $createdAt->format('M d, Y') : 'N/A') }}
+                    </td>
                 </tr>
-            @endif
+            @empty
+                <tr>
+                    <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">No pages found</td>
+                </tr>
+            @endforelse
         </tbody>
     </table>
 </div>

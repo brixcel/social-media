@@ -13,6 +13,7 @@ use App\Http\Controllers\ProfileController; // Add this line
 
 // Auth routes
 Route::get('/register', [FirebaseAuthController::class, 'registerForm']);
+Route::post('/register', [FirebaseAuthController::class, 'register']);
 Route::get('/admin-register', [FirebaseAuthController::class, 'AdminRegistration']);
 Route::get('/login', [FirebaseAuthController::class, 'loginForm'])->name('login');
 Route::post('/login', [FirebaseAuthController::class, 'login'])->name('login.process');

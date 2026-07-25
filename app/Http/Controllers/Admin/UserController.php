@@ -1,32 +1,26 @@
 <?php
 
-
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Services\FirebaseService;
+use App\Models\User;
 
 class UserController extends Controller
 {
-    protected $firebase;
-
-    public function __construct(FirebaseService $firebase)
-    {
-        $this->firebase = $firebase;
-    }
-
     public function index()
     {
-        return view('admin.users.index');
+        $users = User::all();
+        return view('admin.users.index', compact('users'));
     }
 
     public function banUser($userId)
     {
         try {
-            $this->firebase->updateData("users/{$userId}", [
+            $user = User::findOrFail($userId);
+            $user->update([
                 'status' => 'banned',
-                'bannedAt' => time(),
+                'banned_at' => now(),
             ]);
 
             return response()->json([
@@ -44,9 +38,10 @@ class UserController extends Controller
     public function unbanUser($userId)
     {
         try {
-            $this->firebase->updateData("users/{$userId}", [
+            $user = User::findOrFail($userId);
+            $user->update([
                 'status' => 'active',
-                'bannedAt' => null,
+                'banned_at' => null,
             ]);
 
             return response()->json([
@@ -64,14 +59,9 @@ class UserController extends Controller
     public function deleteUser($userId)
     {
         try {
-            // Delete user data from Firebase
-            $this->firebase->deleteData("users/{$userId}");
-            
-            // Delete user's posts
-            $this->firebase->deleteData("posts/{$userId}");
-            
-            // Delete user's comments
-            $this->firebase->deleteData("comments/{$userId}");
+            $user = User::findOrFail($userId);
+            $user->posts()->delete();
+            $user->delete();
 
             return response()->json([
                 'success' => true,

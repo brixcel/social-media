@@ -3,55 +3,45 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Kreait\Firebase\Factory;
 use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use App\Models\Post;
 
 class ProfileController extends Controller
 {
-    protected $auth;
-    protected $database;
-
-    public function __construct()
-    {
-        $path = base_path('storage/firebase/firebase_credentials.json');
-
-        if (!file_exists($path)) {
-            die("This file path {$path} does not exist");
-        }
-
-        $factory = (new Factory)->withServiceAccount($path);
-        $this->auth = $factory->createAuth();
-        $this->database = $factory->createDatabase();
-    }
-
     public function index()
     {
-        // Get user ID from session if available
-        $userId = Session::get('firebaseUserId');
+        $userModel = Auth::user();
+        $userId = $userModel ? $userModel->id : Session::get('firebaseUserId');
+
+        if ($userId && !$userModel) {
+            $userModel = User::find($userId);
+        }
+
         $userData = [];
         $posts = [];
-        
-        // If we have a userId, fetch the data
-        if ($userId) {
-            // Get user data from Firebase
-            $userRef = $this->database->getReference('users/' . $userId);
-            $userData = $userRef->getValue() ?: [];
 
-            // Get user's posts
-            $postsRef = $this->database->getReference('posts');
-            $postsSnapshot = $postsRef->orderByChild('userId')->equalTo($userId)->getSnapshot();
-            $posts = $postsSnapshot->getValue() ?: [];
+        if ($userModel) {
+            $userData = [
+                'firstName' => $userModel->first_name ?? $userModel->name,
+                'lastName' => $userModel->last_name ?? '',
+                'email' => $userModel->email,
+                'bio' => '',
+                'profileImageUrl' => null,
+            ];
 
-            // Sort posts by timestamp (newest first)
-            if (!empty($posts)) {
-                uasort($posts, function($a, $b) {
-                    return $b['timestamp'] <=> $a['timestamp'];
-                });
+            $postsCollection = Post::where('user_id', $userModel->id)->orderBy('created_at', 'desc')->get();
+            foreach ($postsCollection as $p) {
+                $posts[$p->id] = [
+                    'id' => $p->id,
+                    'content' => $p->content,
+                    'mediaURL' => $p->mediaURL,
+                    'timestamp' => $p->created_at ? $p->created_at->timestamp : time(),
+                ];
             }
         }
 
-        // Always return the view - let JavaScript handle authentication
         return view('Auth.profile', [
             'user' => $userData,
             'userId' => $userId,
@@ -62,34 +52,28 @@ class ProfileController extends Controller
     public function update(Request $request)
     {
         try {
-            // Validate the request
             $validated = $request->validate([
                 'firstName' => 'required|string|max:255',
                 'lastName' => 'required|string|max:255',
                 'bio' => 'nullable|string|max:1000',
-                'userId' => 'required|string'
             ]);
 
-            // Update user data in Firebase
-            $userRef = $this->database->getReference('users/' . $validated['userId']);
-            
-            $updates = [
-                'firstName' => $validated['firstName'],
-                'lastName' => $validated['lastName'],
-                'bio' => $validated['bio'] ?? '',
-                'updatedAt' => ['.sv' => 'timestamp'] // Server timestamp
-            ];
-
-            $userRef->update($updates);
+            $user = Auth::user();
+            if ($user) {
+                $user->update([
+                    'first_name' => $validated['firstName'],
+                    'last_name' => $validated['lastName'],
+                    'name' => trim($validated['firstName'] . ' ' . $validated['lastName']),
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Profile updated successfully'
             ]);
-
         } catch (\Exception $e) {
             \Log::error('Profile update error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred while updating your profile: ' . $e->getMessage()
@@ -99,8 +83,8 @@ class ProfileController extends Controller
 
     public function uploadImage(Request $request)
     {
-        $userId = Session::get('firebaseUserId');
-        if (!$userId) {
+        $user = Auth::user();
+        if (!$user) {
             return response()->json(['error' => 'User not authenticated'], 401);
         }
 
@@ -109,23 +93,10 @@ class ProfileController extends Controller
         ]);
 
         try {
-            // Get the image file
             $image = $request->file('image');
-            
-            // Generate a unique filename
-            $filename = time() . '_' . $userId . '.' . $image->getClientOriginalExtension();
-            
-            // Store the image in the public storage
+            $filename = time() . '_' . $user->id . '.' . $image->getClientOriginalExtension();
             $path = $image->storeAs('profile_images', $filename, 'public');
-            
-            // Generate the URL for the stored image
             $imageUrl = asset('storage/' . $path);
-            
-            // Update profile image URL in Firebase
-            $userRef = $this->database->getReference('users/' . $userId);
-            $userRef->update([
-                'profileImageUrl' => $imageUrl
-            ]);
 
             return response()->json([
                 'success' => true, 
@@ -134,7 +105,7 @@ class ProfileController extends Controller
             ]);
         } catch (\Exception $e) {
             \Log::error('Profile image upload error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred while uploading your profile image: ' . $e->getMessage()

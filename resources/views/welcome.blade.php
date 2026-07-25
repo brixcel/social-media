@@ -20,6 +20,11 @@
         @endif
     </head>
     <body class="bg-[#FDFDFC] dark:bg-[#0a0a0a] text-[#1b1b18] flex p-6 lg:p-8 items-center lg:justify-center min-h-screen flex-col">
+        <!-- DEMO NOTICE BANNER -->
+        <div style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 12px 16px; margin-bottom: 20px; border-radius: 8px; font-size: 0.9rem; text-align: center; width: 100%; max-width: 800px;">
+            <strong>⚠️ DEMO ENVIRONMENT ONLY:</strong> This website is for demonstration purposes only. Some features may not work properly.
+        </div>
+
         <header class="w-full lg:max-w-4xl max-w-[335px] text-sm mb-6 not-has-[nav]:hidden">
             @if (Route::has('login'))
                 <nav class="flex items-center justify-end gap-4">

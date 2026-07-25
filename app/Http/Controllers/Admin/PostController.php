@@ -4,49 +4,35 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Kreait\Firebase\Contract\Database;
-use App\Services\FirebaseService;
+use App\Models\Post;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 class PostController extends Controller
 {
-    protected $database;
-    protected $tablename;
-    protected $firebaseService;
-
-    public function __construct(FirebaseService $firebaseService)
-    {
-        $this->database = $firebaseService->getDatabase();
-        $this->tablename = 'posts'; 
-    }
-
     public function index()
     {
         try {
-            // Retrieve posts from Firebase
-            $snapshot = $this->database->getReference($this->tablename)->orderByChild('timestamp')->getSnapshot();
+            $postsCollection = Post::with('user')->orderBy('created_at', 'desc')->get();
+            $posts = [];
 
-            if (!$snapshot->exists()) {
-                return view('admin.posts.index', ['posts' => []]);
-            }
-
-            $posts = $snapshot->getValue();
-
-            // Convert to array and sort by timestamp (newest first)
-            if (is_array($posts)) {
-                uasort($posts, function ($a, $b) {
-                    return $b['timestamp'] <=> $a['timestamp'];
-                });
-            }
-
-            // Add user data to each post
-            foreach ($posts as $key => &$post) {
-                $post['id'] = $key; // Add post ID for reference
-                if (isset($post['userId'])) {
-                    $userSnapshot = $this->database->getReference('users/' . $post['userId'])->getSnapshot();
-                    if ($userSnapshot->exists()) {
-                        $post['userData'] = $userSnapshot->getValue();
-                    }
-                }
+            foreach ($postsCollection as $postModel) {
+                $posts[$postModel->id] = [
+                    'id' => $postModel->id,
+                    'content' => $postModel->content,
+                    'mediaURL' => $postModel->mediaURL,
+                    'mediaType' => $postModel->mediaType,
+                    'mediaName' => $postModel->mediaName,
+                    'mediaSize' => $postModel->mediaSize,
+                    'timestamp' => $postModel->created_at ? $postModel->created_at->timestamp : time(),
+                    'userId' => $postModel->user_id,
+                    'likes' => $postModel->likes ?? [],
+                    'userData' => $postModel->user ? [
+                        'first_name' => $postModel->user->first_name ?? $postModel->user->name,
+                        'last_name' => $postModel->user->last_name ?? '',
+                        'email' => $postModel->user->email,
+                    ] : null,
+                ];
             }
 
             return view('admin.posts.index', compact('posts'));
@@ -55,6 +41,7 @@ class PostController extends Controller
             return view('admin.posts.index', ['posts' => [], 'error' => $e->getMessage()]);
         }
     }
+
     public function create()
     {
         return view('admin.posts.create');
@@ -62,7 +49,6 @@ class PostController extends Controller
 
     public function store(Request $request)
     {
-        // Validate the input first
         $validatedData = $request->validate([
             'content' => 'required|string',
             'mediaURL' => 'nullable|url', 
@@ -71,87 +57,75 @@ class PostController extends Controller
             'mediaSize' => 'nullable|string',
             'userId' => 'nullable|string',
         ]);
-    
-        // Prepare the data
-        $postData = [
+
+        $userId = $validatedData['userId'] ?? Auth::id() ?? 1;
+
+        Post::create([
             'content' => $validatedData['content'],
             'mediaURL' => $validatedData['mediaURL'] ?? null,
             'mediaType' => $validatedData['mediaType'] ?? null,
             'mediaName' => $validatedData['mediaName'] ?? null,
             'mediaSize' => $validatedData['mediaSize'] ?? null,
-            'timestamp' => time(), // Use server timestamp for consistency
-            'userId' => $validatedData['userId'] ?? auth()->id() ?? 'admin-user',
-            'likes' => [], // Initialize empty likes object
-        ];
-    
-        // Filter out null values
-        $postData = array_filter($postData, function($value) {
-            return $value !== null;
-        });
-    
-        // Insert into Firebase
-        $this->database->getReference($this->tablename)->push($postData);
-    
+            'user_id' => is_numeric($userId) ? $userId : Auth::id(),
+            'likes' => [],
+        ]);
+
         return redirect()->route('admin.posts.index')->with('success', 'Post created successfully!');
     }
+
     public function storeFromHomepage(Request $request)
     {
         try {
-            // Log the incoming request for debugging
             \Log::info('Post data received:', $request->all());
-            
-            // Prepare the data from the AJAX request
-            $postData = [
+
+            $userId = $request->input('userId');
+            if (!$userId || !is_numeric($userId)) {
+                $userId = Auth::id() ?? 1;
+            }
+
+            $post = Post::create([
                 'content' => $request->input('content', ''),
                 'mediaURL' => $request->input('mediaURL'),
                 'mediaType' => $request->input('mediaType'),
                 'mediaName' => $request->input('mediaName'),
                 'mediaSize' => $request->input('mediaSize'),
-                'timestamp' => $request->input('timestamp', time()), // Use client timestamp or current time
-                'userId' => $request->input('userId', 'anonymous'),
+                'user_id' => $userId,
                 'likes' => $request->input('likes', []),
-            ];
-            
-            // Filter out null values
-            $postData = array_filter($postData, function($value) {
-                return $value !== null;
-            });
-            
-            \Log::info('Prepared post data:', $postData);
-            
-            // Insert into Firebase
-            $newPost = $this->database->getReference($this->tablename)->push($postData);
-            
-            \Log::info('Post created with ID: ' . $newPost->getKey());
-            
+            ]);
+
+            \Log::info('Post created with ID: ' . $post->id);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Post created successfully!',
-                'postId' => $newPost->getKey()
+                'postId' => $post->id
             ]);
         } catch (\Exception $e) {
             \Log::error('Error creating post: ' . $e->getMessage());
             \Log::error($e->getTraceAsString());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error creating post: ' . $e->getMessage()
             ], 500);
         }
     }
+
     public function edit($id)
     {
         try {
-            // Get the post data
-            $postRef = $this->database->getReference("posts/{$id}");
-            $post = $postRef->getValue();
+            $postModel = Post::find($id);
 
-            if (!$post) {
+            if (!$postModel) {
                 return redirect()->route('admin.posts')->with('error', 'Post not found');
             }
 
-            // Add the post ID to the data
-            $post['id'] = $id;
+            $post = [
+                'id' => $postModel->id,
+                'content' => $postModel->content,
+                'mediaURL' => $postModel->mediaURL,
+                'mediaType' => $postModel->mediaType,
+            ];
 
             return view('admin.posts.edit', compact('post'));
         } catch (\Exception $e) {
@@ -168,10 +142,9 @@ class PostController extends Controller
                 'mediaType' => 'nullable|string'
             ]);
 
-            // Prepare update data
+            $postModel = Post::findOrFail($id);
             $updates = [
                 'content' => $validatedData['content'],
-                'lastEdited' => time()
             ];
 
             if (isset($validatedData['mediaURL'])) {
@@ -179,10 +152,9 @@ class PostController extends Controller
                 $updates['mediaType'] = $validatedData['mediaType'];
             }
 
-            // Update the post
-            $this->database->getReference("posts/{$id}")->update($updates);
+            $postModel->update($updates);
 
-            return redirect()->route('admin.posts')->with('success', 'Post updated successfully');
+            return redirect()->route('admin.posts.index')->with('success', 'Post updated successfully');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Error updating post: ' . $e->getMessage());
         }
@@ -190,7 +162,7 @@ class PostController extends Controller
 
     public function destroy($id)
     {
-        $this->database->getReference($this->tablename . '/' . $id)->remove();
+        Post::destroy($id);
         return redirect()->route('admin.posts.index')->with('success', 'Post deleted successfully!');
     }
 }
